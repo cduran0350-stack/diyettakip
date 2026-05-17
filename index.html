@@ -255,7 +255,7 @@ function showSystemNotification(title, body, tag) {
 }
 
 // ---------- Auto-update ----------
-const APP_VERSION = '1.0.7';
+const APP_VERSION = '1.1.0';
 (function checkAppVersion() {
   const stored = localStorage.getItem('diyet_app_version');
   if (stored !== APP_VERSION) {
@@ -282,7 +282,19 @@ async function checkForUpdate() {
 window.addEventListener('load', () => setTimeout(checkForUpdate, 1500));
 window.addEventListener('focus', checkForUpdate);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForUpdate(); });
-setInterval(checkForUpdate, 5 * 60 * 1000);
+setInterval(checkForUpdate, 60 * 1000); // her 1 dakikada bir kontrol
+
+// Service Worker güncelleme kontrolu
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => r.update().catch(()=>{}));
+  });
+  setInterval(() => {
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.forEach(r => r.update().catch(()=>{}));
+    });
+  }, 5 * 60 * 1000);
+}
 
 // ---------- Storage ----------
 const DB = {
