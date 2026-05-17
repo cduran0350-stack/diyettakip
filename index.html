@@ -984,6 +984,29 @@ function clientDetailView() {
     <td class="actions"><button data-viewtt="${t.id}">Görüntüle</button> <button class="danger" data-deltt="${t.id}">Sil</button></td>
   </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;color:#718096">Tetkik yok</td></tr>`;
 
+  // Yeni tetkik (Anket sekmesinden gönderilenler) + danışandan gelen sonuçlar
+  const tetReqs = (db.tetkikRequests||[]).filter(r=>r.clientId===c.id).sort((a,b)=>b.date-a.date);
+  const tetReqRows = tetReqs.map(r=>`<tr>
+    <td>${fmtDate(r.date)}</td>
+    <td>${r.tests.length} tahlil</td>
+    <td>${(r.note||'').slice(0,60).replace(/</g,'&lt;')}${(r.note||'').length>60?'…':''}</td>
+    <td class="actions">
+      <button class="secondary" data-tetpdfd="${r.id}">PDF</button>
+      <button class="danger" data-deltetr="${r.id}">Sil</button>
+    </td>
+  </tr>`).join('') || `<tr><td colspan="4" style="text-align:center;color:#718096">Tetkik isteği gönderilmedi</td></tr>`;
+
+  const tetRes = (db.tetkikResults||[]).filter(r=>r.clientId===c.id).sort((a,b)=>b.date-a.date);
+  const tetResRows = tetRes.map(r=>`<tr>
+    <td>${fmtDate(r.date)}</td>
+    <td>${r.fileName}</td>
+    <td class="actions">
+      <a href="${r.dataUrl}" download="${r.fileName}" style="display:inline-block;background:#4a5568;color:#fff;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600">İndir</a>
+      ${r.fileType && r.fileType.startsWith('image/') ? `<button data-viewres="${r.id}">Görüntüle</button>` : ''}
+      <button class="danger" data-delres="${r.id}">Sil</button>
+    </td>
+  </tr>`).join('') || `<tr><td colspan="3" style="text-align:center;color:#718096">Henüz sonuç gelmedi</td></tr>`;
+
   let wSummary = '';
   if (ws.length) {
     const vals = ws.map(w=>w.weight);
@@ -1099,7 +1122,18 @@ function clientDetailView() {
     </div>
 
     <div class="card">
-      <h3>🧪 Tetkikler (${tests.length})</h3>
+      <h3>🧪 Gönderilen Tetkik İstekleri (${tetReqs.length})</h3>
+      <div style="margin-bottom:10px"><button id="quickSendTetkik" style="width:auto;padding:8px 14px">📤 Yeni Tetkik Gönder (Tüm Tahliller)</button></div>
+      <table><thead><tr><th>Tarih</th><th>İçerik</th><th>Açıklama</th><th>İşlem</th></tr></thead><tbody>${tetReqRows}</tbody></table>
+    </div>
+
+    <div class="card">
+      <h3>📥 Danışandan Gelen Sonuçlar (${tetRes.length})</h3>
+      <table><thead><tr><th>Tarih</th><th>Dosya</th><th>İşlem</th></tr></thead><tbody>${tetResRows}</tbody></table>
+    </div>
+
+    <div class="card">
+      <h3>🧪 Ekstra Tetkik / Not (${tests.length})</h3>
       <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:12px">
         <input id="testTitle" placeholder="Tetkik Başlığı (örn: Kan Tahlili)" />
         <textarea id="testContent" placeholder="Tetkik notları / sonuç değerleri..." style="min-height:100px"></textarea>
@@ -1118,6 +1152,17 @@ function clientDetailView() {
     ${dietViewModal}
     ${viewSurveyModal}
     ${testViewModal}
+    ${(() => {
+      if (!view.viewTetkikResultId) return '';
+      const r = (db.tetkikResults||[]).find(x=>x.id===view.viewTetkikResultId);
+      if (!r || !r.fileType || !r.fileType.startsWith('image/')) return '';
+      return `<div class="modal-bg"><div class="modal" style="max-width:720px">
+        <h3>${r.fileName}</h3>
+        <p style="color:#718096;font-size:12px">${fmtDate(r.date)}</p>
+        <img src="${r.dataUrl}" style="max-width:100%;border-radius:8px" />
+        <button id="closeResView" style="margin-top:14px">Kapat</button>
+      </div></div>`;
+    })()}
     ${(() => {
       const ec = view.editClientId ? db.clients.find(x=>x.id===view.editClientId) : null;
       if (!ec) return '';
@@ -1657,6 +1702,27 @@ function bindEvents() {
       if ($('#closeSurveyView')) $('#closeSurveyView').onclick = () => { view.viewSurveyId = null; render(); };
       document.querySelectorAll('[data-viewtt]').forEach(b => b.onclick = () => { view.viewTestId = b.dataset.viewtt; render(); });
       if ($('#closeTestView')) $('#closeTestView').onclick = () => { view.viewTestId = null; render(); };
+
+      // Tetkik request/result handlers (detail panel)
+      document.querySelectorAll('[data-tetpdfd]').forEach(b => b.onclick = () => downloadTetkikPdf(b.dataset.tetpdfd));
+      document.querySelectorAll('[data-deltetr]').forEach(b => b.onclick = () => {
+        if (!confirm('Tetkik isteği silinsin mi?')) return;
+        db.tetkikRequests = (db.tetkikRequests||[]).filter(r=>r.id!==b.dataset.deltetr); save(); render();
+      });
+      document.querySelectorAll('[data-viewres]').forEach(b => b.onclick = () => { view.viewTetkikResultId = b.dataset.viewres; render(); });
+      document.querySelectorAll('[data-delres]').forEach(b => b.onclick = () => {
+        if (!confirm('Sonuç silinsin mi?')) return;
+        db.tetkikResults = (db.tetkikResults||[]).filter(r=>r.id!==b.dataset.delres); save(); render();
+      });
+      if ($('#closeResView')) $('#closeResView').onclick = () => { view.viewTetkikResultId = null; render(); };
+      if ($('#quickSendTetkik')) $('#quickSendTetkik').onclick = () => {
+        const dup = (db.tetkikRequests||[]).some(r => r.clientId===cid);
+        if (dup && !confirm('Bu danışana daha önce tetkik gönderdiniz. Tekrar gönderilsin mi?')) return;
+        const allTests = TETKIK_TESTS.map((_,i) => i);
+        db.tetkikRequests.push({id:uid(), clientId:cid, tests:allTests, note:DEFAULT_TETKIK_NOTE, date:Date.now()});
+        queueNotification(cid, '🧪 Yeni Tetkik İsteği', 'Diyetisyeniniz size kan tahlili istedi.');
+        save(); render();
+      };
 
       document.querySelectorAll('[data-deldd]').forEach(b => b.onclick = () => {
         if (!confirm('Diyet silinsin mi?')) return;
