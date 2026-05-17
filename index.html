@@ -252,7 +252,7 @@ const DB = {
     const d = JSON.parse(localStorage.getItem('diyet_db') || 'null');
     if (d) return d;
     const init = {
-      dietitian: { username: 'admin', password: 'admin' },
+      dietitian: { username: 'dytaysenur', password: 'ozenduran' },
       clients: [],   // {id, username, password, name, active}
       diets: [],     // {id, clientId, title, content, date}
       weights: [],   // {id, clientId, weight, date}
@@ -272,6 +272,10 @@ if (!db.tests) { db.tests = []; DB.save(db); }
 if (!db.tetkikRequests) { db.tetkikRequests = []; DB.save(db); }
 if (!db.tetkikResults) { db.tetkikResults = []; DB.save(db); }
 if (!db.notificationsLog) { db.notificationsLog = []; DB.save(db); }
+if (db.dietitian && db.dietitian.username === 'admin' && db.dietitian.password === 'admin') {
+  db.dietitian = { username: 'dytaysenur', password: 'ozenduran' };
+  DB.save(db);
+}
 
 const TETKIK_TESTS = [
   { cat:'Kansızlık', name:'Hemogram', why:'Genel kan durumu, anemi' },
@@ -407,7 +411,7 @@ function loginView() {
       </label>
       <button id="loginBtn">Giriş Yap</button>
       <div class="error" id="err"></div>
-      <p style="text-align:center;color:#718096;font-size:12px">Varsayılan diyetisyen: admin / admin</p>
+      <p style="text-align:center;color:#718096;font-size:12px">Diyetisyen girişi</p>
     </div>`;
 }
 
