@@ -1565,8 +1565,7 @@ function bindEvents() {
         const title = prompt('Diyet başlığı:'); if (!title) return;
         const content = prompt('Diyet içeriği:'); if (!content) return;
         db.diets.push({id:uid(), clientId:cid, title, content, date:Date.now()});
-        const cc = db.clients.find(x=>x.id===cid);
-        if (cc) { if (!cc.notifications) cc.notifications = []; cc.notifications.push({id:uid(), title:'📋 Yeni Diyet', body:title, date:Date.now()}); }
+        queueNotification(cid, '🥗 Yeni Diyet Programı', title);
         save(); render();
       };
 
@@ -1578,8 +1577,7 @@ function bindEvents() {
         const finish = (fileName, fileData) => {
           if (!db.tests) db.tests = [];
           db.tests.push({id:uid(), clientId:cid, title, content, fileName, fileData, date:Date.now()});
-          const cc = db.clients.find(x=>x.id===cid);
-          if (cc) { if (!cc.notifications) cc.notifications = []; cc.notifications.push({id:uid(), title:'🧪 Yeni Tetkik', body:title, date:Date.now()}); }
+          queueNotification(cid, '🧪 Yeni Tetkik', title);
           save(); render();
         };
         if (fileInput && fileInput.files && fileInput.files[0]) {
@@ -1685,7 +1683,9 @@ function bindEvents() {
         const d = db.diets.find(x=>x.id===view.editSentId);
         const t = $('#eTitle').value.trim(), c = $('#eContent').value.trim();
         if (!t || !c) return alert('Başlık ve içerik gerekli');
-        d.title = t; d.content = c; save(); view.editSentId = null; render();
+        d.title = t; d.content = c;
+        queueNotification(d.clientId, '✏️ Diyet Güncellendi', t);
+        save(); view.editSentId = null; render();
       };
     }
 
@@ -1770,8 +1770,7 @@ function bindEvents() {
         if (!ids.length) { $('#sErr').textContent='En az bir danışan seçin'; return; }
         ids.forEach(cid => {
           db.surveys.push({id:uid(), clientId:cid, questions:qids, answers:{}, date:Date.now(), completedDate:null});
-          const cc = db.clients.find(x=>x.id===cid);
-          if (cc) { if (!cc.notifications) cc.notifications = []; cc.notifications.push({id:uid(), title:'📋 Yeni Anket', body:'Diyetisyeniniz size bir anket gönderdi. Lütfen doldurun.', date:Date.now()}); }
+          queueNotification(cid, '📋 Yeni Anket', 'Diyetisyeniniz size bir anket gönderdi. Lütfen doldurun.');
         });
         save(); alert(ids.length+' danışana anket gönderildi'); render();
       };
@@ -1833,7 +1832,10 @@ function bindEvents() {
       const v = parseFloat($('#editW_'+id).value);
       if (!v || v <= 0) return alert('Geçerli bir kilo girin');
       const w = db.weights.find(x=>x.id===id); if (!w) return;
-      w.weight = v; view.editWeightId = null; save(); render();
+      w.weight = v;
+      const me = db.clients.find(x=>x.id===session.clientId);
+      queueDietitianNotification('✏️ Kilo Güncellendi', (me?me.name:'Bir danışan') + ' kilo kaydını güncelledi: ' + v + ' kg');
+      view.editWeightId = null; save(); render();
     });
     document.querySelectorAll('[data-viewd]').forEach(b => b.onclick = () => {
       const c = db.clients.find(x=>x.id===session.clientId);
