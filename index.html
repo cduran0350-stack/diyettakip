@@ -340,14 +340,34 @@ try {
   FS_DOC = fsdb.collection('app').doc('state');
 } catch(e) { console.error('Firebase init failed', e); }
 
+function showFsError(msg) {
+  let bar = document.getElementById('fsErrBar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'fsErrBar';
+    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c53030;color:#fff;padding:10px 14px;font-family:Segoe UI,Arial,sans-serif;font-size:13px;z-index:99999;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.2)';
+    document.body.appendChild(bar);
+  }
+  bar.textContent = '⚠️ Firebase hatası: ' + msg + ' — (Firestore Rules açık mı?)';
+}
+function clearFsError() {
+  const bar = document.getElementById('fsErrBar');
+  if (bar) bar.remove();
+}
+
 function pushToFirestore() {
   if (!FS_DOC || !db) return;
   if (fsSaveTimer) clearTimeout(fsSaveTimer);
   fsSaveTimer = setTimeout(() => {
     fsPendingWrite = true;
     fsLastWriteAt = Date.now();
-    const payload = JSON.parse(JSON.stringify(db));
-    FS_DOC.set(payload).catch(e => console.error('Firestore set', e)).finally(() => {
+    let payload;
+    try { payload = JSON.parse(JSON.stringify(db)); }
+    catch(e) { showFsError('Veri serileştirilemedi: ' + e.message); fsPendingWrite = false; return; }
+    FS_DOC.set(payload).then(() => clearFsError()).catch(e => {
+      console.error('Firestore set', e);
+      showFsError((e && e.code ? e.code + ' — ' : '') + (e && e.message ? e.message : 'bilinmeyen hata'));
+    }).finally(() => {
       setTimeout(() => { fsPendingWrite = false; }, 600);
     });
   }, 500);
@@ -367,10 +387,17 @@ if (FS_DOC) {
       fsReady = true;
       if (typeof render === 'function') try { render(); } catch(e) {}
     } else {
-      FS_DOC.set(JSON.parse(JSON.stringify(db))).catch(()=>{});
+      FS_DOC.set(JSON.parse(JSON.stringify(db))).then(()=>clearFsError()).catch(e => {
+        console.error('Firestore initial set', e);
+        showFsError((e && e.code ? e.code + ' — ' : '') + (e && e.message ? e.message : 'ilk yazim hatasi'));
+      });
       fsReady = true;
     }
-  }).catch(e => { console.error('Firestore get', e); fsReady = true; });
+  }).catch(e => {
+    console.error('Firestore get', e);
+    showFsError((e && e.code ? e.code + ' — ' : '') + (e && e.message ? e.message : 'okuma hatasi'));
+    fsReady = true;
+  });
 
   FS_DOC.onSnapshot(snap => {
     if (!snap.exists) return;
