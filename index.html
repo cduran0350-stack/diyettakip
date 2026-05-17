@@ -129,37 +129,64 @@ document.addEventListener('click', e => {
 
 // ---------- Ana ekrana ekle (PWA install) ----------
 let deferredInstallPrompt = null;
+let bannerShown = false;
+const DISMISS_DAYS = 3;
 const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+const isIOS = () => {
+  const ua = navigator.userAgent;
+  if (/iphone|ipad|ipod/i.test(ua)) return true;
+  // iPad iOS 13+ reports as MacIntel with touch
+  return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+};
+const isAndroid = () => /android/i.test(navigator.userAgent);
+const dismissedRecently = () => {
+  const ts = parseInt(localStorage.getItem('diyet_install_dismissed_ts')||'0',10);
+  if (!ts) return false;
+  return (Date.now() - ts) < DISMISS_DAYS * 86400000;
+};
+const browserInstallHint = () => {
+  const ua = navigator.userAgent;
+  if (/SamsungBrowser/i.test(ua)) return 'Sağ alttaki menüden <b>"Sayfayı ekle → Ana Ekran"</b> seçin.';
+  if (/Firefox/i.test(ua)) return 'Sağ üstteki ⋮ menüden <b>"Ana ekrana ekle"</b> seçin.';
+  if (/Edg/i.test(ua)) return 'Sağ alttaki ⋯ menüden <b>"Telefona ekle"</b> seçin.';
+  return 'Tarayıcı menüsünden (⋮ veya ⋯) <b>"Ana ekrana ekle"</b> / <b>"Uygulamayı yükle"</b> seçeneğini seçin.';
+};
 
 function showInstallBanner(kind) {
+  if (bannerShown) return;
   if (document.getElementById('installBanner')) return;
   if (isStandalone()) return;
-  if (localStorage.getItem('diyet_install_dismissed') === '1') return;
+  if (dismissedRecently()) return;
+  bannerShown = true;
   const div = document.createElement('div');
   div.id = 'installBanner';
-  div.style.cssText = 'position:fixed;left:10px;right:10px;bottom:14px;z-index:9999;background:#fff;border:2px solid #2c7a7b;border-radius:12px;padding:14px 16px;box-shadow:0 6px 24px rgba(0,0,0,.2);display:flex;align-items:center;gap:12px;font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto';
-  if (kind === 'ios') {
-    div.innerHTML = '<div style="font-size:28px">📲</div>'
-      + '<div style="flex:1;font-size:13px;color:#2d3748;line-height:1.4"><b>Ana ekrana eklemek ister misiniz?</b><br>Safari\'de aşağıdaki <b>Paylaş</b> ⬆️ tuşuna basıp <b>"Ana Ekrana Ekle"</b> seçin.</div>'
-      + '<button id="installNo" style="background:#e2e8f0;color:#2d3748;border:none;border-radius:6px;padding:8px 12px;font-weight:600;cursor:pointer">Kapat</button>';
-  } else {
+  div.style.cssText = 'position:fixed;left:10px;right:10px;bottom:14px;z-index:9999;background:#fff;border:2px solid #2c7a7b;border-radius:12px;padding:14px 16px;box-shadow:0 6px 24px rgba(0,0,0,.25);display:flex;align-items:center;gap:12px;font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto';
+  if (kind === 'prompt') {
     div.innerHTML = '<div style="font-size:28px">📲</div>'
       + '<div style="flex:1;font-size:13px;color:#2d3748;line-height:1.4"><b>Uygulamayı ana ekrana eklemek ister misiniz?</b><br>Tek dokunuşla erişin, bildirim alın.</div>'
       + '<button id="installYes" style="background:#2c7a7b;color:#fff;border:none;border-radius:6px;padding:10px 14px;font-weight:600;cursor:pointer">Evet</button>'
       + '<button id="installNo" style="background:#e2e8f0;color:#2d3748;border:none;border-radius:6px;padding:8px 12px;font-weight:600;cursor:pointer">Hayır</button>';
+  } else if (kind === 'ios') {
+    div.innerHTML = '<div style="font-size:28px">📲</div>'
+      + '<div style="flex:1;font-size:13px;color:#2d3748;line-height:1.4"><b>Ana ekrana eklemek ister misiniz?</b><br>Safari\'de alttaki <b>Paylaş</b> ⬆️ tuşuna basıp <b>"Ana Ekrana Ekle"</b> seçin.</div>'
+      + '<button id="installNo" style="background:#2c7a7b;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-weight:600;cursor:pointer">Tamam</button>';
+  } else {
+    // manual instructions fallback (Android browsers that don't fire beforeinstallprompt)
+    div.innerHTML = '<div style="font-size:28px">📲</div>'
+      + '<div style="flex:1;font-size:13px;color:#2d3748;line-height:1.4"><b>Ana ekrana eklemek ister misiniz?</b><br>' + browserInstallHint() + '</div>'
+      + '<button id="installNo" style="background:#2c7a7b;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-weight:600;cursor:pointer">Tamam</button>';
   }
   document.body.appendChild(div);
-  const close = () => { try { div.remove(); } catch(e) {} };
+  const close = () => { try { div.remove(); } catch(e) {} bannerShown = false; };
   const noBtn = document.getElementById('installNo');
-  if (noBtn) noBtn.onclick = () => { localStorage.setItem('diyet_install_dismissed','1'); close(); };
+  if (noBtn) noBtn.onclick = () => { localStorage.setItem('diyet_install_dismissed_ts', String(Date.now())); close(); };
   const yesBtn = document.getElementById('installYes');
   if (yesBtn) yesBtn.onclick = async () => {
     if (!deferredInstallPrompt) { close(); return; }
-    deferredInstallPrompt.prompt();
     try {
+      deferredInstallPrompt.prompt();
       const choice = await deferredInstallPrompt.userChoice;
-      if (choice.outcome === 'accepted') localStorage.setItem('diyet_install_dismissed','1');
+      if (choice.outcome === 'accepted') localStorage.setItem('diyet_install_dismissed_ts', String(Date.now()));
     } catch(e) {}
     deferredInstallPrompt = null;
     close();
@@ -169,14 +196,23 @@ function showInstallBanner(kind) {
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredInstallPrompt = e;
-  setTimeout(() => showInstallBanner('prompt'), 800);
+  setTimeout(() => showInstallBanner('prompt'), 600);
 });
 window.addEventListener('appinstalled', () => {
-  localStorage.setItem('diyet_install_dismissed','1');
+  localStorage.setItem('diyet_install_dismissed_ts', String(Date.now()));
   const b = document.getElementById('installBanner'); if (b) b.remove();
+  bannerShown = false;
 });
 window.addEventListener('load', () => {
-  if (isIOS() && !isStandalone()) setTimeout(() => showInstallBanner('ios'), 1500);
+  setTimeout(() => {
+    if (isStandalone()) return;
+    if (bannerShown) return;
+    if (isIOS()) { showInstallBanner('ios'); return; }
+    // If beforeinstallprompt didn't fire by now (Android Firefox/Samsung etc), show manual hint
+    if (!deferredInstallPrompt && isAndroid()) { showInstallBanner('manual'); return; }
+    // Desktop / other: also offer manual hint
+    if (!deferredInstallPrompt) showInstallBanner('manual');
+  }, 2500);
 });
 
 // ---------- Service Worker (mobil bildirim icin) ----------
