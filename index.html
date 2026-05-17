@@ -802,6 +802,15 @@ function clientsTab() {
         <input id="cUser" placeholder="Kullanıcı Adı (otomatik)" />
         <input id="cPass" placeholder="Şifre (otomatik)" />
       </div>
+      <div style="margin-top:10px;padding:10px;background:#f7fafc;border-radius:8px;border:1px solid #e2e8f0">
+        <div style="font-weight:700;color:#2c7a7b;margin-bottom:6px">Eklendiğinde otomatik gönder:</div>
+        <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:14px">
+          <input type="checkbox" id="cSendSurvey" checked style="width:auto;margin:0" /> 📋 Anket (tüm sorular)
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:14px">
+          <input type="checkbox" id="cSendTetkik" checked style="width:auto;margin:0" /> 🧪 Tetkik (tüm tahliller)
+        </label>
+      </div>
       <div class="row" style="margin-top:8px">
         <button id="addClient">Danışan Ekle</button>
         <button class="secondary" id="cancelAddClient">İptal</button>
@@ -1765,7 +1774,20 @@ function bindEvents() {
         const name = firstName + ' ' + lastName;
         if (!firstName || !lastName || !phone || !u || !p) { $('#cErr').textContent='Tüm alanları doldurun'; return; }
         if (u === db.dietitian.username || db.clients.find(c=>c.username===u)) { $('#cErr').textContent='Bu kullanıcı adı zaten kullanılıyor'; return; }
-        db.clients.push({id:uid(), name, firstName, lastName, phone, username:u, password:p, active:true});
+        const newId = uid();
+        db.clients.push({id:newId, name, firstName, lastName, phone, username:u, password:p, active:true});
+        const sendSurvey = $('#cSendSurvey') && $('#cSendSurvey').checked;
+        const sendTetkik = $('#cSendTetkik') && $('#cSendTetkik').checked;
+        if (sendSurvey) {
+          const qids = SURVEY_QUESTIONS.map(q => q.id);
+          db.surveys.push({id:uid(), clientId:newId, questions:qids, answers:{}, date:Date.now(), completedDate:null});
+          queueNotification(newId, '📋 Yeni Anket', 'Diyetisyeniniz size bir anket gönderdi. Lütfen doldurun.');
+        }
+        if (sendTetkik) {
+          const allTests = TETKIK_TESTS.map((_,i) => i);
+          db.tetkikRequests.push({id:uid(), clientId:newId, tests:allTests, note:DEFAULT_TETKIK_NOTE, date:Date.now()});
+          queueNotification(newId, '🧪 Yeni Tetkik İsteği', 'Diyetisyeniniz size kan tahlili istedi.');
+        }
         view.showAddClient = false;
         save(); render();
       };
