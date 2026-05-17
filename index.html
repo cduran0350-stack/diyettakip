@@ -1,0 +1,1978 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2c7a7b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<link rel="manifest" href="manifest.json">
+<title>Diyet Takip</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; font-family: Segoe UI, Arial, sans-serif; }
+  body { margin: 0; background: #f0f4f8; color: #222; }
+  .login { max-width: 360px; margin: 100px auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+  .login h2 { margin-top: 0; color: #2c7a7b; text-align: center; }
+  input, select, textarea, button { width: 100%; padding: 10px; margin: 6px 0; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; }
+  textarea { min-height: 150px; resize: vertical; font-family: inherit; }
+  button { background: #2c7a7b; color: #fff; border: none; cursor: pointer; font-weight: 600; }
+  button:hover { background: #285e61; }
+  button.danger { background: #c53030; }
+  button.warn { background: #d69e2e; }
+  button.secondary { background: #4a5568; }
+  header { background: #2c7a7b; color: #fff; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+  header h1 { margin: 0; font-size: 20px; }
+  .container { max-width: 1100px; margin: 20px auto; padding: 0 16px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+  .tabs button { width: auto; padding: 10px 18px; background: #e2e8f0; color: #2d3748; }
+  .tabs button.active { background: #2c7a7b; color: #fff; }
+  .card { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.05); margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 10px; text-align: left; border-bottom: 1px solid #edf2f7; }
+  th { background: #f7fafc; }
+  .badge { padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .badge.active { background: #c6f6d5; color: #22543d; }
+  .badge.passive { background: #fed7d7; color: #742a2a; }
+  .actions button { width: auto; padding: 6px 12px; font-size: 12px; margin-right: 4px; }
+  .error { color: #c53030; text-align: center; min-height: 20px; }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; }
+  h3 { color: #2c7a7b; margin-top: 0; }
+  .diet-box { white-space: pre-wrap; background: #f7fafc; padding: 16px; border-radius: 8px; border-left: 4px solid #2c7a7b; }
+  .multi-select { max-height: 180px; overflow-y: auto; border: 1px solid #cbd5e0; border-radius: 6px; padding: 8px; background: #fff; }
+  .multi-select label { display: block; padding: 4px; cursor: pointer; }
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+  .modal { background: #fff; padding: 24px; border-radius: 10px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+  .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; }
+  .brand-logo { width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg,#2c7a7b 0%,#38b2ac 50%,#81e6d9 100%); display:inline-flex; align-items:center; justify-content:center; box-shadow: 0 4px 12px rgba(44,122,123,.35); flex-shrink:0; }
+  .brand-logo svg { width: 22px; height: 22px; display:block; }
+  .brand-text { display:inline-flex; flex-direction:column; line-height:1.1; }
+  .brand-title { font-weight: 800; font-size: 20px; letter-spacing: .3px; }
+  .brand-sub { font-size: 11px; font-weight: 500; opacity: .85; letter-spacing: 1.5px; text-transform: uppercase; }
+  .login .brand { justify-content: center; width: 100%; margin-bottom: 6px; }
+  .login .brand-logo { width: 56px; height: 56px; border-radius: 16px; }
+  .login .brand-logo svg { width: 32px; height: 32px; }
+  .login .brand-title { font-size: 24px; color: #2c7a7b; }
+  .login .brand-sub { color: #4a5568; }
+  img, svg { max-width: 100%; height: auto; }
+
+  @media (max-width: 768px) {
+    body { font-size: 15px; }
+    .login { margin: 40px 16px; padding: 22px; max-width: none; }
+    header { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+    header h1 { font-size: 17px; }
+    .container { margin: 12px auto; padding: 0 10px; }
+    .card { padding: 14px; border-radius: 8px; }
+    h3 { font-size: 16px; }
+    input, select, textarea, button { font-size: 16px; padding: 12px; }
+    .tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: thin; padding-bottom: 4px; }
+    .tabs button { flex: 0 0 auto; white-space: nowrap; padding: 10px 14px; font-size: 14px; }
+    .row { flex-direction: column; gap: 6px; }
+    .row > * { flex: 1 1 auto; width: 100%; }
+    table { display: block; overflow-x: auto; white-space: nowrap; }
+    th, td { padding: 8px; font-size: 13px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 4px; }
+    .actions button { padding: 8px 10px; font-size: 12px; margin: 0; }
+    .modal { width: 94%; padding: 16px; max-height: 88vh; border-radius: 10px; }
+    .multi-select { max-height: 220px; }
+    textarea { min-height: 180px; }
+  }
+
+  @media (max-width: 420px) {
+    header h1 { font-size: 15px; }
+    .card { padding: 12px; }
+    th, td { padding: 6px; font-size: 12px; }
+    .badge { font-size: 11px; padding: 2px 8px; }
+  }
+
+  @media (hover: none) {
+    button:hover { background: #2c7a7b; }
+    button.danger:hover { background: #c53030; }
+    button.warn:hover { background: #d69e2e; }
+    button.secondary:hover { background: #4a5568; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ---------- Cift tiklama korumasi (gonder/kaydet butonlari) ----------
+document.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.busy === '1') {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    return;
+  }
+  b.dataset.busy = '1';
+  const prevOpacity = b.style.opacity;
+  const prevCursor = b.style.cursor;
+  b.disabled = true;
+  b.style.opacity = '.6';
+  b.style.cursor = 'wait';
+  setTimeout(() => {
+    if (!document.body.contains(b)) return;
+    delete b.dataset.busy;
+    b.disabled = false;
+    b.style.opacity = prevOpacity;
+    b.style.cursor = prevCursor;
+  }, 1200);
+}, true);
+
+// ---------- Ana ekrana ekle (PWA install) ----------
+let deferredInstallPrompt = null;
+const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+
+function showInstallBanner(kind) {
+  if (document.getElementById('installBanner')) return;
+  if (isStandalone()) return;
+  if (localStorage.getItem('diyet_install_dismissed') === '1') return;
+  const div = document.createElement('div');
+  div.id = 'installBanner';
+  div.style.cssText = 'position:fixed;left:10px;right:10px;bottom:14px;z-index:9999;background:#fff;border:2px solid #2c7a7b;border-radius:12px;padding:14px 16px;box-shadow:0 6px 24px rgba(0,0,0,.2);display:flex;align-items:center;gap:12px;font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto';
+  if (kind === 'ios') {
+    div.innerHTML = '<div style="font-size:28px">📲</div>'
+      + '<div style="flex:1;font-size:13px;color:#2d3748;line-height:1.4"><b>Ana ekrana eklemek ister misiniz?</b><br>Safari\'de aşağıdaki <b>Paylaş</b> ⬆️ tuşuna basıp <b>"Ana Ekrana Ekle"</b> seçin.</div>'
+      + '<button id="installNo" style="background:#e2e8f0;color:#2d3748;border:none;border-radius:6px;padding:8px 12px;font-weight:600;cursor:pointer">Kapat</button>';
+  } else {
+    div.innerHTML = '<div style="font-size:28px">📲</div>'
+      + '<div style="flex:1;font-size:13px;color:#2d3748;line-height:1.4"><b>Uygulamayı ana ekrana eklemek ister misiniz?</b><br>Tek dokunuşla erişin, bildirim alın.</div>'
+      + '<button id="installYes" style="background:#2c7a7b;color:#fff;border:none;border-radius:6px;padding:10px 14px;font-weight:600;cursor:pointer">Evet</button>'
+      + '<button id="installNo" style="background:#e2e8f0;color:#2d3748;border:none;border-radius:6px;padding:8px 12px;font-weight:600;cursor:pointer">Hayır</button>';
+  }
+  document.body.appendChild(div);
+  const close = () => { try { div.remove(); } catch(e) {} };
+  const noBtn = document.getElementById('installNo');
+  if (noBtn) noBtn.onclick = () => { localStorage.setItem('diyet_install_dismissed','1'); close(); };
+  const yesBtn = document.getElementById('installYes');
+  if (yesBtn) yesBtn.onclick = async () => {
+    if (!deferredInstallPrompt) { close(); return; }
+    deferredInstallPrompt.prompt();
+    try {
+      const choice = await deferredInstallPrompt.userChoice;
+      if (choice.outcome === 'accepted') localStorage.setItem('diyet_install_dismissed','1');
+    } catch(e) {}
+    deferredInstallPrompt = null;
+    close();
+  };
+}
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  setTimeout(() => showInstallBanner('prompt'), 800);
+});
+window.addEventListener('appinstalled', () => {
+  localStorage.setItem('diyet_install_dismissed','1');
+  const b = document.getElementById('installBanner'); if (b) b.remove();
+});
+window.addEventListener('load', () => {
+  if (isIOS() && !isStandalone()) setTimeout(() => showInstallBanner('ios'), 1500);
+});
+
+// ---------- Service Worker (mobil bildirim icin) ----------
+let swReg = null;
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    swReg = reg;
+    if ('periodicSync' in reg) {
+      navigator.permissions.query({ name: 'periodic-background-sync' }).then(s => {
+        if (s.state === 'granted') {
+          reg.periodicSync.register('check-notifications', { minInterval: 15 * 60 * 1000 }).catch(()=>{});
+        }
+      }).catch(()=>{});
+    }
+  }).catch(()=>{});
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data && e.data.type === 'sw-check-notifications') {
+      db = DB.load();
+      if (session) {
+        if (session.role === 'client') fireClientNotifications();
+        else fireDietitianNotifications();
+      }
+    }
+  });
+}
+
+function showSystemNotification(title, body, tag) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return false;
+  try {
+    if (swReg && swReg.active) {
+      swReg.active.postMessage({ type: 'show-notification', title, body, tag });
+      return true;
+    }
+    const n = new Notification(title, { body, tag, vibrate: [200,100,200] });
+    n.onclick = () => { window.focus(); n.close(); };
+    return true;
+  } catch(e) { return false; }
+}
+
+// ---------- Auto-update ----------
+const APP_VERSION = '1.0.7';
+(function checkAppVersion() {
+  const stored = localStorage.getItem('diyet_app_version');
+  if (stored !== APP_VERSION) {
+    localStorage.setItem('diyet_app_version', APP_VERSION);
+    if (stored !== null && 'caches' in window) {
+      caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).catch(()=>{});
+    }
+  }
+})();
+async function checkForUpdate() {
+  try {
+    const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return;
+    const html = await res.text();
+    const m = html.match(/APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
+    if (m && m[1] !== APP_VERSION) {
+      if ('caches' in window) {
+        try { const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k))); } catch(e) {}
+      }
+      location.reload();
+    }
+  } catch(e) {}
+}
+window.addEventListener('load', () => setTimeout(checkForUpdate, 1500));
+window.addEventListener('focus', checkForUpdate);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForUpdate(); });
+setInterval(checkForUpdate, 5 * 60 * 1000);
+
+// ---------- Storage ----------
+const DB = {
+  load() {
+    const d = JSON.parse(localStorage.getItem('diyet_db') || 'null');
+    if (d) return d;
+    const init = {
+      dietitian: { username: 'admin', password: 'admin' },
+      clients: [],   // {id, username, password, name, active}
+      diets: [],     // {id, clientId, title, content, date}
+      weights: [],   // {id, clientId, weight, date}
+      templates: [] // {id, title, content}
+    };
+    localStorage.setItem('diyet_db', JSON.stringify(init));
+    return init;
+  },
+  save(d) { localStorage.setItem('diyet_db', JSON.stringify(d)); }
+};
+
+let db = DB.load();
+if (!db.templates) { db.templates = []; DB.save(db); }
+if (!db.dietitianNotifications) { db.dietitianNotifications = []; DB.save(db); }
+if (!db.surveys) { db.surveys = []; DB.save(db); }
+if (!db.tests) { db.tests = []; DB.save(db); }
+if (!db.tetkikRequests) { db.tetkikRequests = []; DB.save(db); }
+if (!db.tetkikResults) { db.tetkikResults = []; DB.save(db); }
+if (!db.notificationsLog) { db.notificationsLog = []; DB.save(db); }
+
+const TETKIK_TESTS = [
+  { cat:'Kansızlık', name:'Hemogram', why:'Genel kan durumu, anemi' },
+  { cat:'Kansızlık', name:'Ferritin', why:'Demir depoları' },
+  { cat:'Kansızlık', name:'Serum Demir', why:'Kandaki demir seviyesi' },
+  { cat:'Kansızlık', name:'TIBC', why:'Demir bağlama kapasitesi' },
+  { cat:'Vitaminler', name:'D Vitamini', why:'Bağışıklık, kemik sağlığı' },
+  { cat:'Vitaminler', name:'B12', why:'Sinir sistemi, enerji' },
+  { cat:'Vitaminler', name:'Folik Asit', why:'Hücre yenilenmesi' },
+  { cat:'Şeker', name:'Açlık Glukoz', why:'Kan şekeri durumu' },
+  { cat:'Şeker', name:'İnsülin', why:'İnsülin direnci' },
+  { cat:'Şeker', name:'HbA1c', why:'Son 3 aylık şeker ortalaması' },
+  { cat:'Tiroid', name:'TSH', why:'Tiroid fonksiyonu' },
+  { cat:'Tiroid', name:'Serbest T3', why:'Aktif tiroid hormonu' },
+  { cat:'Tiroid', name:'Serbest T4', why:'Tiroid üretimi' },
+  { cat:'Yağlar', name:'Total Kolesterol', why:'Genel risk' },
+  { cat:'Yağlar', name:'LDL', why:'Kötü kolesterol' },
+  { cat:'Yağlar', name:'HDL', why:'İyi kolesterol' },
+  { cat:'Yağlar', name:'Trigliserid', why:'Yağ metabolizması' },
+  { cat:'Karaciğer', name:'ALT', why:'Karaciğer hasarı' },
+  { cat:'Karaciğer', name:'AST', why:'Karaciğer fonksiyonu' },
+  { cat:'Karaciğer', name:'GGT', why:'Safra/karaciğer durumu' },
+  { cat:'Böbrek', name:'Kreatinin', why:'Böbrek fonksiyonu' },
+  { cat:'Böbrek', name:'Üre', why:'Protein metabolizması' },
+  { cat:'Mineraller', name:'Kalsiyum', why:'Kemik sağlığı' },
+  { cat:'Mineraller', name:'Magnezyum', why:'Kas/sinir sistemi' },
+  { cat:'Mineraller', name:'Çinko', why:'Bağışıklık' },
+  { cat:'Enflamasyon', name:'CRP', why:'Vücutta iltihap' },
+  { cat:'Enflamasyon', name:'Sedimantasyon', why:'Kronik iltihap' }
+];
+const DEFAULT_TETKIK_NOTE = 'Aç karna bu tahlilleri yaptırınız (sağlık ocağı).';
+
+const fmtShortDate = ts => {
+  const d = new Date(ts);
+  return ('0'+d.getDate()).slice(-2) + '.' + ('0'+(d.getMonth()+1)).slice(-2) + '.' + d.getFullYear();
+};
+function getClientSchedule(c) {
+  const diets = db.diets.filter(d=>d.clientId===c.id).sort((a,b)=>a.date-b.date);
+  if (!diets.length) return null;
+  const start = diets[0].date;
+  const periodDays = parseInt(c.period||'0',10);
+  if (!periodDays) return { start, next:null, periodDays:0 };
+  const now = Date.now();
+  let next = start + periodDays * 86400000;
+  while (next < now) next += periodDays * 86400000;
+  return { start, next, periodDays };
+}
+function headerScheduleHtml(c) {
+  const s = getClientSchedule(c);
+  if (!s) return '<div style="font-size:12px;color:#cbd5e0">Diyet henüz başlamadı</div>';
+  const startStr = fmtShortDate(s.start);
+  const nextStr = s.next ? fmtShortDate(s.next) : '—';
+  return `<div style="font-size:12px;color:#e6fffa;line-height:1.4;text-align:right">
+    <div>📅 Başlangıç: <b>${startStr}</b></div>
+    <div>🔄 Sonraki Kontrol: <b>${nextStr}</b></div>
+    <div>⚖️ Sonraki Kilo Takibi: <b>${nextStr}</b></div>
+  </div>`;
+}
+function dietitianScheduleSummary() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayTs = today.getTime();
+  let overdue = 0, todayCnt = 0;
+  db.clients.filter(c=>c.active).forEach(c => {
+    const s = getClientSchedule(c);
+    if (!s || !s.next) return;
+    const d = new Date(s.next); d.setHours(0,0,0,0);
+    if (d.getTime() === todayTs) todayCnt++;
+    else if (d.getTime() < todayTs) overdue++;
+  });
+  return `<div style="font-size:12px;color:#e6fffa;line-height:1.4;text-align:right">
+    <div>📅 ${fmtShortDate(Date.now())}</div>
+    <div>🔄 Bugün kontrol: <b>${todayCnt}</b> · Geciken: <b>${overdue}</b></div>
+  </div>`;
+}
+
+const SURVEY_QUESTIONS = [
+  { id:'age', text:'Yaş', type:'text' },
+  { id:'height', text:'Boy', type:'text' },
+  { id:'weight', text:'Kilo', type:'text' },
+  { id:'targetWeight', text:'Hedef Kilo', type:'text' },
+  { id:'chronic', text:'Herhangi bir kronik hastalığınız var mı?', type:'yesno' },
+  { id:'meds', text:'Düzenli kullanılan ilaç var mı?', type:'yesno' },
+  { id:'allergy', text:'Alerjiniz olan besinler var mı?', type:'yesno' },
+  { id:'sleep', text:'Saat kaçta uyur, saat kaçta uyanırsınız?', type:'text' },
+  { id:'meals', text:'Kaç öğün yemek yersiniz? Yemek saatlerinizi belirtiniz.', type:'text' },
+  { id:'bowel', text:'Kabızlık probleminiz olur mu? Veya bağırsakla ilgili herhangi bir sorun yaşar mısınız?', type:'yesno' },
+  { id:'dislike', text:'Sevmediğiniz, tüketmediğiniz besinler var mı?', type:'yesno' }
+];
+let session = null; // {role: 'dietitian'|'client', clientId?}
+let view = { tab: 'clients', selectedClientId: null, weightClientId: null };
+
+// ---------- Helpers ----------
+const $ = sel => document.querySelector(sel);
+const uid = () => Math.random().toString(36).slice(2, 10);
+const fmtDate = ts => new Date(ts).toLocaleString('tr-TR');
+const brandLogo = (sub) => `
+  <span class="brand">
+    <span class="brand-logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 21c-1 0-7-3.5-7-10a5 5 0 0 1 7-4.58A5 5 0 0 1 19 11c0 6.5-6 10-7 10Z" fill="#fff" opacity=".95"/>
+        <path d="M12 7.5c1.5-2 5-1.5 5 1.5 0 3-3 5-5 6.5-2-1.5-5-3.5-5-6.5 0-3 3.5-3.5 5-1.5Z" fill="#2c7a7b"/>
+        <path d="M14.5 4.5c1.2.4 1.8 1.6 1.5 2.8" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+    </span>
+    <span class="brand-text">
+      <span class="brand-title">Diyet Takip</span>
+      ${sub ? `<span class="brand-sub">${sub}</span>` : ''}
+    </span>
+  </span>`;
+const save = () => DB.save(db);
+
+function render() {
+  const app = $('#app');
+  if (!session) app.innerHTML = loginView();
+  else if (session.role === 'dietitian') app.innerHTML = dietitianView();
+  else app.innerHTML = clientView();
+  bindEvents();
+}
+
+// ---------- Login ----------
+function loginView() {
+  const remembered = localStorage.getItem('diyet_keep_open') === '1';
+  return `
+    <div class="login">
+      <h2 style="display:flex;justify-content:center;margin-bottom:18px">${brandLogo('Diyetisyen & Danışan')}</h2>
+      <input id="u" placeholder="Kullanıcı adı" />
+      <div style="position:relative">
+        <input id="p" type="password" placeholder="Şifre" style="padding-right:48px" />
+        <button type="button" id="togglePw" title="Şifreyi göster/gizle" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);width:auto;padding:6px 10px;background:transparent;color:#2c7a7b;font-size:18px;margin:0;border:none">👁️</button>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:#2d3748;margin:8px 0">
+        <input type="checkbox" id="keepOpen" ${remembered?'checked':''} style="width:auto;margin:0" /> Sürekli açık tut
+      </label>
+      <button id="loginBtn">Giriş Yap</button>
+      <div class="error" id="err"></div>
+      <p style="text-align:center;color:#718096;font-size:12px">Varsayılan diyetisyen: admin / admin</p>
+    </div>`;
+}
+
+function persistSession() {
+  if (localStorage.getItem('diyet_keep_open') === '1' && session) {
+    localStorage.setItem('diyet_session', JSON.stringify(session));
+  } else {
+    localStorage.removeItem('diyet_session');
+  }
+}
+
+function doLogin() {
+  const u = $('#u').value.trim();
+  const p = $('#p').value;
+  const keep = $('#keepOpen') && $('#keepOpen').checked;
+  localStorage.setItem('diyet_keep_open', keep ? '1' : '0');
+  if (u === db.dietitian.username && p === db.dietitian.password) {
+    session = { role: 'dietitian' };
+    persistSession();
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(() => fireDietitianNotifications());
+    } else {
+      setTimeout(fireDietitianNotifications, 500);
+    }
+    render();
+    return;
+  }
+  const c = db.clients.find(x => x.username === u && x.password === p);
+  if (!c) { $('#err').textContent = 'Kullanıcı adı veya şifre hatalı'; return; }
+  if (!c.active) { $('#err').textContent = 'Hesabınız pasif durumda. Diyetisyeninize başvurun.'; return; }
+  session = { role: 'client', clientId: c.id, loginAt: Date.now() };
+  persistSession();
+  c.lastSeen = Date.now();
+  c.onlineUntil = Date.now() + 45000;
+  save();
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().then(() => fireClientNotifications());
+  } else {
+    setTimeout(fireClientNotifications, 500);
+  }
+  render();
+}
+
+function logNotification(target, title, body) {
+  if (!db.notificationsLog) db.notificationsLog = [];
+  db.notificationsLog.push({id:uid(), target, title, body, date:Date.now(), read:false});
+}
+
+function queueNotification(clientId, title, body) {
+  const c = db.clients.find(x=>x.id===clientId);
+  if (!c) return;
+  if (!c.notifications) c.notifications = [];
+  c.notifications.push({id:uid(), title, body, date:Date.now()});
+  logNotification(clientId, title, body);
+}
+
+function queueDietitianNotification(title, body) {
+  if (!db.dietitianNotifications) db.dietitianNotifications = [];
+  db.dietitianNotifications.push({id:uid(), title, body, date:Date.now()});
+  logNotification('dietitian', title, body);
+}
+
+function myLogTarget() {
+  if (!session) return null;
+  return session.role === 'dietitian' ? 'dietitian' : session.clientId;
+}
+function myNotifications() {
+  const t = myLogTarget(); if (!t) return [];
+  return (db.notificationsLog||[]).filter(n=>n.target===t).sort((a,b)=>b.date-a.date);
+}
+function unreadCount() {
+  return myNotifications().filter(n=>!n.read).length;
+}
+function notificationBellHtml() {
+  const cnt = unreadCount();
+  const badge = cnt > 0 ? `<span style="position:absolute;top:-6px;right:-6px;background:#e53e3e;color:#fff;border-radius:50%;min-width:20px;height:20px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;border:2px solid #2c7a7b">${cnt>99?'99+':cnt}</span>` : '';
+  return `<button id="bellBtn" title="Bildirimler" style="position:relative;width:auto;padding:8px 12px;background:#285e61;font-size:18px;margin:0">🔔${badge}</button>`;
+}
+function notificationsModalHtml() {
+  if (!view.showNotifications) return '';
+  const list = myNotifications();
+  const rows = list.map(n => `
+    <div style="border-bottom:1px solid #edf2f7;padding:10px 4px;display:flex;gap:10px;align-items:flex-start;${n.read?'opacity:.7':'background:#f0fff4'}">
+      <div style="flex:1">
+        <div style="font-weight:700;color:#2c7a7b">${n.title.replace(/</g,'&lt;')}</div>
+        <div style="font-size:13px;color:#2d3748;margin-top:2px">${(n.body||'').replace(/</g,'&lt;')}</div>
+        <div style="font-size:11px;color:#718096;margin-top:4px">${fmtDate(n.date)}</div>
+      </div>
+      <button class="danger" data-deln="${n.id}" style="width:auto;padding:6px 10px;font-size:12px;margin:0">Sil</button>
+    </div>`).join('') || '<p style="color:#718096;text-align:center;padding:20px">Bildirim yok</p>';
+  return `<div class="modal-bg"><div class="modal" style="max-width:560px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <h3 style="margin:0">🔔 Bildirimler</h3>
+      ${list.length ? '<button class="danger" id="delAllNotif" style="width:auto;padding:6px 12px;font-size:12px;margin:0">Tümünü Sil</button>' : ''}
+    </div>
+    <div style="max-height:60vh;overflow-y:auto">${rows}</div>
+    <button id="closeNotif" style="margin-top:12px">Kapat</button>
+  </div></div>`;
+}
+function changePasswordModalHtml() {
+  if (!view.showChangePw) return '';
+  return `<div class="modal-bg"><div class="modal" style="max-width:400px">
+    <h3>🔑 Şifre Değiştir</h3>
+    <input id="oldPw" type="password" placeholder="Mevcut Şifre" />
+    <input id="newPw" type="password" placeholder="Yeni Şifre (en az 4 karakter)" />
+    <input id="newPw2" type="password" placeholder="Yeni Şifre (Tekrar)" />
+    <div class="row" style="margin-top:10px">
+      <button id="savePw">Kaydet</button>
+      <button class="secondary" id="cancelPw">İptal</button>
+    </div>
+    <div class="error" id="pwErr"></div>
+  </div></div>`;
+}
+
+function fireDietitianNotifications() {
+  if (!session || session.role !== 'dietitian') return;
+  if (!db.dietitianNotifications || !db.dietitianNotifications.length) return;
+  if (!('Notification' in window)) { db.dietitianNotifications = []; save(); return; }
+  if (Notification.permission === 'granted') {
+    db.dietitianNotifications.forEach(n => showSystemNotification(n.title, n.body, n.id));
+    db.dietitianNotifications = [];
+    save();
+  }
+}
+
+function fireClientNotifications() {
+  if (!session || session.role !== 'client') return;
+  const c = db.clients.find(x=>x.id===session.clientId);
+  if (!c || !c.notifications || !c.notifications.length) return;
+  if (!('Notification' in window)) { c.notifications = []; save(); return; }
+  if (Notification.permission === 'granted') {
+    c.notifications.forEach(n => showSystemNotification(n.title, n.body, n.id));
+    c.notifications = [];
+    save();
+  }
+}
+
+let heartbeatTimer = null, dietitianRefreshTimer = null;
+function startHeartbeat() {
+  if (heartbeatTimer) clearInterval(heartbeatTimer);
+  heartbeatTimer = setInterval(() => {
+    if (!session || session.role !== 'client') { clearInterval(heartbeatTimer); heartbeatTimer = null; return; }
+    const TEN_DAYS = 10 * 24 * 60 * 60 * 1000;
+    if (session.loginAt && (Date.now() - session.loginAt) > TEN_DAYS) {
+      const cc = db.clients.find(x=>x.id===session.clientId);
+      if (cc) { cc.onlineUntil = 0; save(); }
+      session = null; localStorage.removeItem('diyet_session');
+      clearInterval(heartbeatTimer); heartbeatTimer = null;
+      alert('10 günlük oturum süresi doldu. Lütfen tekrar giriş yapın.');
+      render();
+      return;
+    }
+    db = DB.load();
+    const c = db.clients.find(x=>x.id===session.clientId);
+    if (!c) return;
+    c.lastSeen = Date.now();
+    c.onlineUntil = Date.now() + 45000;
+    save();
+    fireClientNotifications();
+  }, 20000);
+}
+function startDietitianRefresh() {
+  if (dietitianRefreshTimer) clearInterval(dietitianRefreshTimer);
+  dietitianRefreshTimer = setInterval(() => {
+    if (!session || session.role !== 'dietitian') { clearInterval(dietitianRefreshTimer); dietitianRefreshTimer = null; return; }
+    db = DB.load();
+    fireDietitianNotifications();
+    if (view.tab === 'clients' || view.tab === 'weights') render();
+  }, 15000);
+}
+
+// ---------- Dietitian View ----------
+function dietitianView() {
+  const tab = view.tab;
+  return `
+    <header>
+      <h1 id="appTitle" style="cursor:pointer;user-select:none;margin:0" title="Yenile">${brandLogo('Diyetisyen Paneli')}</h1>
+      <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
+        ${dietitianScheduleSummary()}
+        ${notificationBellHtml()}
+        <button id="logout" style="width:auto;background:#285e61">Çıkış</button>
+      </div>
+    </header>
+    ${notificationsModalHtml()}
+    <div class="container">
+      <div class="tabs">
+        <button data-tab="clients" class="${tab==='clients'?'active':''}">Danışanlar</button>
+        <button data-tab="diet" class="${tab==='diet'?'active':''}">Diyet Yaz / Gönder</button>
+        <button data-tab="templates" class="${tab==='templates'?'active':''}">Diyetler</button>
+        <button data-tab="surveys" class="${tab==='surveys'?'active':''}">Anket</button>
+        <button data-tab="weights" class="${tab==='weights'?'active':''}">Kilo Takibi</button>
+      </div>
+      ${view.detailClientId ? clientDetailView() : (tab==='clients' ? clientsTab() : tab==='diet' ? dietTab() : tab==='templates' ? templatesTab() : tab==='surveys' ? surveysTab() : weightsTab())}
+    </div>`;
+}
+
+function clientsTab() {
+  const rows = db.clients.map(c => `
+    <tr>
+      <td>${c.name}</td>
+      <td>${c.phone||'-'}</td>
+      <td>${c.username}</td>
+      <td>${c.password}</td>
+      <td>
+        <select data-period="${c.id}" style="margin:0;padding:6px">
+          <option value="">-</option>
+          <option value="10" ${c.period==='10'?'selected':''}>10 Günlük</option>
+          <option value="15" ${c.period==='15'?'selected':''}>15 Günlük</option>
+          <option value="30" ${c.period==='30'?'selected':''}>Aylık</option>
+        </select>
+      </td>
+      <td>
+        <select data-payment="${c.id}" style="margin:0;padding:6px;background:${c.payment==='alindi'?'#c6f6d5':c.payment==='odemedi'?'#fed7d7':'#fff'};color:${c.payment==='alindi'?'#22543d':c.payment==='odemedi'?'#742a2a':'#222'};font-weight:600">
+          <option value="">-</option>
+          <option value="alindi" ${c.payment==='alindi'?'selected':''}>Alındı</option>
+          <option value="odemedi" ${c.payment==='odemedi'?'selected':''}>Ödeme Yapmadı</option>
+        </select>
+      </td>
+      <td>${(c.onlineUntil && Date.now() < c.onlineUntil) ? '<span style="display:inline-flex;align-items:center;gap:6px;color:#22543d;font-weight:600"><span style="width:10px;height:10px;border-radius:50%;background:#38a169;display:inline-block;box-shadow:0 0 0 3px rgba(56,161,105,.2)"></span>Çevrimiçi</span>' : (c.lastSeen ? `<span style="color:#718096;font-size:12px">${fmtDate(c.lastSeen)}</span>` : '<span style="color:#a0aec0;font-size:12px">-</span>')}</td>
+      <td><span class="badge ${c.active?'active':'passive'}">${c.active?'Aktif':'Pasif'}</span></td>
+      <td class="actions">
+        <button data-detail="${c.id}">📂 Detay</button>
+        <button data-edit="${c.id}">Düzenle</button>
+        <button class="warn" data-toggle="${c.id}">${c.active?'Pasif Yap':'Aktif Yap'}</button>
+        <button class="danger" data-del="${c.id}">Sil</button>
+      </td>
+    </tr>`).join('') || `<tr><td colspan="9" style="text-align:center;color:#718096">Henüz danışan yok</td></tr>`;
+  const ec = view.editClientId ? db.clients.find(x=>x.id===view.editClientId) : null;
+  const editModal = ec ? `
+    <div class="modal-bg"><div class="modal">
+      <h3>Danışanı Düzenle</h3>
+      <input id="eName" placeholder="Ad Soyad" value="${(ec.name||'').replace(/"/g,'&quot;')}" />
+      <input id="ePhone" placeholder="Telefon Numarası" value="${(ec.phone||'').replace(/"/g,'&quot;')}" />
+      <div class="row">
+        <input id="eUser" placeholder="Kullanıcı Adı" value="${(ec.username||'').replace(/"/g,'&quot;')}" />
+        <input id="ePass" placeholder="Şifre" value="${(ec.password||'').replace(/"/g,'&quot;')}" />
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button id="saveEditClient">Kaydet</button>
+        <button class="secondary" id="cancelEditClient">İptal</button>
+      </div>
+      <div class="error" id="eErr"></div>
+    </div></div>` : '';
+  const addModal = view.showAddClient ? `
+    <div class="modal-bg"><div class="modal">
+      <h3>Yeni Danışan Ekle</h3>
+      <div class="row">
+        <input id="cFirstName" placeholder="Ad" />
+        <input id="cLastName" placeholder="Soyad" />
+      </div>
+      <input id="cPhone" placeholder="Telefon Numarası" />
+      <div class="row">
+        <input id="cUser" placeholder="Kullanıcı Adı (otomatik)" />
+        <input id="cPass" placeholder="Şifre (otomatik)" />
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button id="addClient">Danışan Ekle</button>
+        <button class="secondary" id="cancelAddClient">İptal</button>
+      </div>
+      <div class="error" id="cErr"></div>
+    </div></div>` : '';
+  return `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <h3 style="margin:0">Danışanlar</h3>
+        <button id="openAddClient" style="width:auto;padding:10px 16px">➕ Yeni Danışan Ekle</button>
+      </div>
+      <table style="margin-top:14px">
+        <thead><tr><th>Ad</th><th>Telefon</th><th>Kullanıcı</th><th>Şifre</th><th>Periyot</th><th>Ödeme</th><th>Son Görülme</th><th>Durum</th><th>İşlem</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    ${addModal}
+    ${editModal}`;
+}
+
+function dietTab() {
+  const opts = db.clients.filter(c=>c.active).map(c =>
+    `<label><input type="checkbox" class="dietClient" value="${c.id}"/> ${c.name} (${c.username})</label>`
+  ).join('') || '<p style="color:#718096">Aktif danışan yok</p>';
+
+  const sent = db.diets.slice().reverse().map(d => {
+    const c = db.clients.find(x=>x.id===d.clientId);
+    return `<tr><td>${fmtDate(d.date)}</td><td>${c?c.name:'?'}</td><td>${d.title}</td>
+      <td class="actions">
+        <button data-viewsent="${d.id}">Görüntüle</button>
+        <button class="secondary" data-editsent="${d.id}">Düzenle</button>
+        <button class="danger" data-deldiet="${d.id}">Sil</button>
+      </td></tr>`;
+  }).join('') || `<tr><td colspan="4" style="text-align:center;color:#718096">Henüz diyet gönderilmedi</td></tr>`;
+
+  let sentModal = '';
+  if (view.editSentId) {
+    const d = db.diets.find(x=>x.id===view.editSentId);
+    if (d) {
+      const c = db.clients.find(x=>x.id===d.clientId);
+      sentModal = `<div class="modal-bg"><div class="modal" style="max-width:640px">
+        <h3>Diyet Düzenle - ${c?c.name:''}</h3>
+        <input id="eTitle" value="${d.title.replace(/"/g,'&quot;')}" />
+        <textarea id="eContent" style="min-height:260px">${d.content.replace(/</g,'&lt;')}</textarea>
+        <div class="row" style="margin-top:10px">
+          <button id="saveEdit">Kaydet</button>
+          <button class="secondary" id="cancelEdit">İptal</button>
+        </div>
+      </div></div>`;
+    }
+  } else if (view.viewSentId) {
+    const d = db.diets.find(x=>x.id===view.viewSentId);
+    if (d) {
+      const c = db.clients.find(x=>x.id===d.clientId);
+      sentModal = `<div class="modal-bg"><div class="modal">
+        <h3>${d.title}</h3>
+        <p style="color:#718096;font-size:12px">${c?c.name:''} - ${fmtDate(d.date)}</p>
+        <div class="diet-box">${d.content.replace(/</g,'&lt;')}</div>
+        <button id="closeView" style="margin-top:14px">Kapat</button>
+      </div></div>`;
+    }
+  }
+
+  return `
+    <div class="card">
+      <h3>Diyet Programı Yaz</h3>
+      <input id="dTitle" placeholder="Diyet Başlığı (örn: Haftalık Diyet 1)" />
+      <textarea id="dContent" placeholder="Diyet programını buraya yazın...&#10;&#10;Sabah: ...&#10;Ara öğün: ...&#10;Öğle: ...&#10;..."></textarea>
+      <h3 style="margin-top:20px">Danışan Seç</h3>
+      <div class="multi-select">${opts}</div>
+      <button id="sendDiet" style="margin-top:10px">📤 Diyeti Gönder</button>
+      <div class="error" id="dErr"></div>
+    </div>
+    <div class="card">
+      <h3>Gönderilen Diyetler</h3>
+      <table>
+        <thead><tr><th>Tarih</th><th>Danışan</th><th>Başlık</th><th>İşlem</th></tr></thead>
+        <tbody>${sent}</tbody>
+      </table>
+    </div>
+    ${sentModal}`;
+}
+
+function templatesTab() {
+  const editing = view.editTemplateId ? db.templates.find(t=>t.id===view.editTemplateId) : null;
+  const mode = view.tplMode || (editing && editing.fileName ? 'pdf' : 'text');
+  const rows = db.templates.map(t => {
+    const isPdf = !!t.fileName;
+    const preview = isPdf ? `📎 ${t.fileName}` : ((t.content||'').slice(0,60).replace(/</g,'&lt;')+((t.content||'').length>60?'…':''));
+    return `<tr>
+      <td>${isPdf?'📄 PDF':'📝 Metin'}</td>
+      <td>${t.title}</td>
+      <td style="color:#718096;font-size:12px">${preview}</td>
+      <td class="actions">
+        <button data-sendt="${t.id}">📤 Gönder</button>
+        ${isPdf?`<a href="${t.fileData}" download="${t.fileName}"><button class="secondary" type="button">İndir</button></a>`:''}
+        <button class="secondary" data-editt="${t.id}">Düzenle</button>
+        <button class="danger" data-delt="${t.id}">Sil</button>
+      </td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="4" style="text-align:center;color:#718096">Henüz hazır diyet yok</td></tr>`;
+
+  let sendModal = '';
+  if (view.sendTemplateId) {
+    const t = db.templates.find(x=>x.id===view.sendTemplateId);
+    const opts = db.clients.filter(c=>c.active).map(c =>
+      `<label><input type="checkbox" class="tplClient" value="${c.id}"/> ${c.name} (${c.username})</label>`
+    ).join('') || '<p style="color:#718096">Aktif danışan yok</p>';
+    sendModal = `<div class="modal-bg"><div class="modal">
+      <h3>${t.title} - Danışan Seç</h3>
+      <div class="multi-select">${opts}</div>
+      <div class="row" style="margin-top:10px">
+        <button id="confirmSendTpl">📤 Gönder</button>
+        <button class="secondary" id="cancelSendTpl">İptal</button>
+      </div>
+      <div class="error" id="tplSendErr"></div>
+    </div></div>`;
+  }
+
+  const tabBtn = (m, label) => `<button class="${mode===m?'':'secondary'}" data-tplmode="${m}" style="width:auto;padding:8px 14px;margin:0">${label}</button>`;
+  const existingFile = editing && editing.fileName ? `<p style="color:#4a5568;font-size:13px;margin:4px 0">Mevcut dosya: <a href="${editing.fileData}" download="${editing.fileName}" style="color:#2c7a7b">📎 ${editing.fileName}</a></p>` : '';
+  const formBody = mode === 'pdf'
+    ? `<input id="tTitle" placeholder="Diyet Başlığı" value="${editing ? editing.title.replace(/"/g,'&quot;') : ''}" />
+       ${existingFile}
+       <input id="tFile" type="file" accept="application/pdf" style="padding:8px" />
+       <p style="color:#718096;font-size:12px;margin:4px 0">PDF dosyası seçin (max 5MB)</p>`
+    : `<input id="tTitle" placeholder="Diyet Başlığı" value="${editing ? editing.title.replace(/"/g,'&quot;') : ''}" />
+       <textarea id="tContent" placeholder="Diyet içeriği...">${editing ? (editing.content||'').replace(/</g,'&lt;') : ''}</textarea>`;
+  return `
+    <div class="card">
+      <h3>${editing ? 'Diyeti Düzenle' : 'Yeni Diyet Ekle'}</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        ${tabBtn('text','📝 Diyet Ekle (Elle Yaz)')} ${tabBtn('pdf','📄 PDF Ekle')}
+      </div>
+      ${formBody}
+      <div class="row">
+        <button id="saveTemplate">${editing ? 'Güncelle' : 'Kaydet'}</button>
+        ${editing ? '<button class="secondary" id="cancelEditTpl">İptal</button>' : ''}
+      </div>
+      <div class="error" id="tErr"></div>
+    </div>
+    <div class="card">
+      <h3>Hazır Diyetler</h3>
+      <table>
+        <thead><tr><th>Tip</th><th>Başlık</th><th>Önizleme</th><th>İşlem</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    ${sendModal}`;
+}
+
+function clientDetailView() {
+  const c = db.clients.find(x=>x.id===view.detailClientId);
+  if (!c) { view.detailClientId = null; return ''; }
+  const diets = db.diets.filter(d=>d.clientId===c.id).sort((a,b)=>b.date-a.date);
+  const ws = db.weights.filter(w=>w.clientId===c.id).sort((a,b)=>b.date-a.date);
+  const surveys = db.surveys.filter(s=>s.clientId===c.id).sort((a,b)=>b.date-a.date);
+  const online = c.onlineUntil && Date.now() < c.onlineUntil;
+  const periodLabel = c.period==='30'?'Aylık':c.period?c.period+' Günlük':'-';
+  const payLabel = c.payment==='alindi'?'<span class="badge active">Alındı</span>':c.payment==='odemedi'?'<span class="badge passive">Ödeme Yapmadı</span>':'-';
+
+  const dietRows = diets.map(d=>`<tr><td>${fmtDate(d.date)}</td><td>${d.title}</td><td class="actions"><button data-viewdd="${d.id}">Görüntüle</button> <button class="danger" data-deldd="${d.id}">Sil</button></td></tr>`).join('')
+    || `<tr><td colspan="3" style="text-align:center;color:#718096">Diyet yok</td></tr>`;
+  const tests = (db.tests||[]).filter(t=>t.clientId===c.id).sort((a,b)=>b.date-a.date);
+  const testRows = tests.map(t=>`<tr>
+    <td>${fmtDate(t.date)}</td>
+    <td>${t.title}</td>
+    <td>${(t.content||'').slice(0,80).replace(/</g,'&lt;')}${(t.content||'').length>80?'…':''}</td>
+    <td>${t.fileName?`<a href="${t.fileData}" download="${t.fileName}" style="color:#2c7a7b">📎 ${t.fileName}</a>`:'-'}</td>
+    <td class="actions"><button data-viewtt="${t.id}">Görüntüle</button> <button class="danger" data-deltt="${t.id}">Sil</button></td>
+  </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;color:#718096">Tetkik yok</td></tr>`;
+
+  let wSummary = '';
+  if (ws.length) {
+    const vals = ws.map(w=>w.weight);
+    const avg = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
+    const min = Math.min(...vals).toFixed(1), max = Math.max(...vals).toFixed(1);
+    const sorted = ws.slice().sort((a,b)=>a.date-b.date);
+    const diff = (sorted[sorted.length-1].weight - sorted[0].weight).toFixed(1);
+    const dc = diff>0?'#c53030':diff<0?'#22543d':'#718096';
+    wSummary = `<div style="background:#f7fafc;padding:10px 14px;border-radius:8px;margin-bottom:10px;font-size:13px;color:#4a5568">
+      ${ws.length} kayıt · Ort: <b>${avg}</b> · Min: ${min} · Max: ${max} · Değişim: <b style="color:${dc}">${diff>0?'+':''}${diff} kg</b>
+    </div>`;
+  }
+  const wRows = ws.map(w=>`<tr><td>${fmtDate(w.date)}</td><td>${w.weight} kg</td><td class="actions"><button class="danger" data-delw="${w.id}">Sil</button></td></tr>`).join('')
+    || `<tr><td colspan="3" style="text-align:center;color:#718096">Kilo kaydı yok</td></tr>`;
+
+  const surveyRows = surveys.map(s=>`<tr>
+    <td>${fmtDate(s.date)}</td>
+    <td>${s.completedDate?'<span class="badge active">Tamamlandı</span>':'<span class="badge passive">Bekliyor</span>'}</td>
+    <td class="actions">${s.completedDate?`<button data-vs="${s.id}">Yanıtları Gör</button> `:''}<button class="danger" data-dels="${s.id}">Sil</button></td>
+  </tr>`).join('') || `<tr><td colspan="3" style="text-align:center;color:#718096">Anket yok</td></tr>`;
+
+  let viewSurveyModal = '';
+  if (view.viewSurveyId) {
+    const s = db.surveys.find(x=>x.id===view.viewSurveyId);
+    if (s) {
+      const rows = s.questions.map(qid => {
+        const q = SURVEY_QUESTIONS.find(x=>x.id===qid); if (!q) return '';
+        const a = s.answers && s.answers[qid]; let val = '-';
+        if (a) val = q.type==='yesno' ? ((a.value==='evet'?'Evet':'Hayır') + (a.detail?' — '+a.detail:'')) : (a.value || '-');
+        return `<tr><td style="width:55%">${q.text}</td><td>${(''+val).replace(/</g,'&lt;')}</td></tr>`;
+      }).join('');
+      viewSurveyModal = `<div class="modal-bg"><div class="modal" style="max-width:640px">
+        <h3>Anket Yanıtları</h3>
+        <p style="color:#718096;font-size:12px">Tamamlanma: ${fmtDate(s.completedDate)}</p>
+        <table>${rows}</table>
+        <button id="closeSurveyView" style="margin-top:14px">Kapat</button>
+      </div></div>`;
+    }
+  }
+
+  let dietViewModal = '';
+  if (view.viewDietId) {
+    const d = db.diets.find(x=>x.id===view.viewDietId);
+    if (d) {
+      const body = d.fileName
+        ? `<p><a href="${d.fileData}" download="${d.fileName}" style="color:#2c7a7b;font-weight:600">📎 ${d.fileName}</a></p>
+           <iframe src="${d.fileData}" style="width:100%;height:60vh;border:1px solid #e2e8f0;border-radius:8px"></iframe>`
+        : `<div class="diet-box">${(d.content||'').replace(/</g,'&lt;')}</div>`;
+      dietViewModal = `<div class="modal-bg"><div class="modal" style="max-width:720px">
+        <h3>${d.title}</h3>
+        <p style="color:#718096;font-size:12px">${fmtDate(d.date)}</p>
+        ${body}
+        <button id="closeDietView" style="margin-top:14px">Kapat</button>
+      </div></div>`;
+    }
+  }
+
+  let testViewModal = '';
+  if (view.viewTestId) {
+    const t = (db.tests||[]).find(x=>x.id===view.viewTestId);
+    if (t) testViewModal = `<div class="modal-bg"><div class="modal">
+      <h3>${t.title}</h3>
+      <p style="color:#718096;font-size:12px">${fmtDate(t.date)}</p>
+      <div class="diet-box">${(t.content||'').replace(/</g,'&lt;')}</div>
+      ${t.fileName?`<p style="margin-top:10px"><a href="${t.fileData}" download="${t.fileName}" style="color:#2c7a7b">📎 ${t.fileName}</a></p>`:''}
+      <button id="closeTestView" style="margin-top:14px">Kapat</button>
+    </div></div>`;
+  }
+
+  return `
+    <button class="secondary" id="backFromDetail" style="width:auto;margin-bottom:12px">← Danışan Listesi</button>
+    <div class="card">
+      <h3>👤 ${c.name} ${online?'<span style="margin-left:8px;font-size:13px;color:#22543d">🟢 Çevrimiçi</span>':''}</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;font-size:14px">
+        <div><b>Telefon:</b> ${c.phone||'-'}</div>
+        <div><b>Kullanıcı:</b> ${c.username}</div>
+        <div><b>Şifre:</b> ${c.password}</div>
+        <div><b>Periyot:</b>
+          <select data-period="${c.id}" style="margin:0;padding:4px;width:auto">
+            <option value="">-</option>
+            <option value="10" ${c.period==='10'?'selected':''}>10 Günlük</option>
+            <option value="15" ${c.period==='15'?'selected':''}>15 Günlük</option>
+            <option value="30" ${c.period==='30'?'selected':''}>Aylık</option>
+          </select>
+        </div>
+        <div><b>Ödeme:</b>
+          <select data-payment="${c.id}" style="margin:0;padding:4px;width:auto;background:${c.payment==='alindi'?'#c6f6d5':c.payment==='odemedi'?'#fed7d7':'#fff'};font-weight:600">
+            <option value="">-</option>
+            <option value="alindi" ${c.payment==='alindi'?'selected':''}>Alındı</option>
+            <option value="odemedi" ${c.payment==='odemedi'?'selected':''}>Ödeme Yapmadı</option>
+          </select>
+        </div>
+        <div><b>Durum:</b> ${c.active?'<span class="badge active">Aktif</span>':'<span class="badge passive">Pasif</span>'}</div>
+        <div><b>Son Görülme:</b> ${c.lastSeen?fmtDate(c.lastSeen):'-'}</div>
+      </div>
+      <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:6px">
+        <button data-edit="${c.id}" style="width:auto;padding:8px 14px">✏️ Düzenle</button>
+        <button class="warn" data-toggle="${c.id}" style="width:auto;padding:8px 14px">${c.active?'Pasif Yap':'Aktif Yap'}</button>
+        <button class="danger" data-del="${c.id}" style="width:auto;padding:8px 14px">🗑️ Sil</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📋 Gönderilen Diyetler (${diets.length})</h3>
+      <div style="margin-bottom:10px"><button id="quickSendDiet" style="width:auto;padding:8px 14px">📤 Yeni Diyet Gönder</button></div>
+      <table><thead><tr><th>Tarih</th><th>Başlık</th><th>İşlem</th></tr></thead><tbody>${dietRows}</tbody></table>
+    </div>
+
+    <div class="card">
+      <h3>⚖️ Kilo Kayıtları (${ws.length})</h3>
+      ${wSummary}
+      <table><thead><tr><th>Tarih</th><th>Kilo</th><th>İşlem</th></tr></thead><tbody>${wRows}</tbody></table>
+    </div>
+
+    <div class="card">
+      <h3>🧪 Tetkikler (${tests.length})</h3>
+      <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:12px">
+        <input id="testTitle" placeholder="Tetkik Başlığı (örn: Kan Tahlili)" />
+        <textarea id="testContent" placeholder="Tetkik notları / sonuç değerleri..." style="min-height:100px"></textarea>
+        <input id="testFile" type="file" style="padding:8px" />
+        <button id="addTest" style="width:auto;padding:10px 16px">➕ Tetkik Ekle</button>
+        <div class="error" id="testErr"></div>
+      </div>
+      <table><thead><tr><th>Tarih</th><th>Başlık</th><th>Not</th><th>Dosya</th><th>İşlem</th></tr></thead><tbody>${testRows}</tbody></table>
+    </div>
+
+    <div class="card">
+      <h3>📋 Anketler (${surveys.length})</h3>
+      <table><thead><tr><th>Tarih</th><th>Durum</th><th>İşlem</th></tr></thead><tbody>${surveyRows}</tbody></table>
+    </div>
+
+    ${dietViewModal}
+    ${viewSurveyModal}
+    ${testViewModal}
+    ${(() => {
+      const ec = view.editClientId ? db.clients.find(x=>x.id===view.editClientId) : null;
+      if (!ec) return '';
+      return `<div class="modal-bg"><div class="modal">
+        <h3>Danışanı Düzenle</h3>
+        <input id="eName" placeholder="Ad Soyad" value="${(ec.name||'').replace(/"/g,'&quot;')}" />
+        <input id="ePhone" placeholder="Telefon Numarası" value="${(ec.phone||'').replace(/"/g,'&quot;')}" />
+        <div class="row">
+          <input id="eUser" placeholder="Kullanıcı Adı" value="${(ec.username||'').replace(/"/g,'&quot;')}" />
+          <input id="ePass" placeholder="Şifre" value="${(ec.password||'').replace(/"/g,'&quot;')}" />
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button id="saveEditClient">Kaydet</button>
+          <button class="secondary" id="cancelEditClient">İptal</button>
+        </div>
+        <div class="error" id="eErr"></div>
+      </div></div>`;
+    })()}`;
+}
+
+function surveysTab() {
+  const qChecks = SURVEY_QUESTIONS.map(q =>
+    `<label style="display:block;padding:6px"><input type="checkbox" class="sq" value="${q.id}" checked style="width:auto;margin-right:8px"/> ${q.text}</label>`
+  ).join('');
+  const clientOpts = db.clients.filter(c=>c.active).map(c =>
+    `<label style="display:block;padding:4px"><input type="checkbox" class="sClient" value="${c.id}" style="width:auto;margin-right:8px"/> ${c.name}</label>`
+  ).join('') || '<p style="color:#718096">Aktif danışan yok</p>';
+
+  const list = db.surveys.slice().reverse().map(s => {
+    const c = db.clients.find(x=>x.id===s.clientId);
+    return `<tr>
+      <td>${fmtDate(s.date)}</td>
+      <td>${c?c.name:'?'}</td>
+      <td>${s.completedDate ? '<span class="badge active">Tamamlandı</span>' : '<span class="badge passive">Bekliyor</span>'}</td>
+      <td class="actions">
+        ${s.completedDate ? `<button data-vs="${s.id}">Yanıtları Gör</button>` : ''}
+        <button class="danger" data-dels="${s.id}">Sil</button>
+      </td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="4" style="text-align:center;color:#718096">Anket yok</td></tr>`;
+
+  let detail = '';
+  if (view.viewSurveyId) {
+    const s = db.surveys.find(x=>x.id===view.viewSurveyId);
+    if (s) {
+      const c = db.clients.find(x=>x.id===s.clientId);
+      const rows = s.questions.map(qid => {
+        const q = SURVEY_QUESTIONS.find(x=>x.id===qid); if (!q) return '';
+        const a = s.answers && s.answers[qid];
+        let val = '-';
+        if (a) {
+          if (q.type === 'yesno') val = (a.value==='evet'?'Evet':'Hayır') + (a.detail?' — '+a.detail:'');
+          else val = a.value || '-';
+        }
+        return `<tr><td style="width:55%">${q.text}</td><td>${(''+val).replace(/</g,'&lt;')}</td></tr>`;
+      }).join('');
+      detail = `<div class="modal-bg"><div class="modal" style="max-width:640px">
+        <h3>${c?c.name:''} - Anket Yanıtları</h3>
+        <p style="color:#718096;font-size:12px">Tamamlanma: ${fmtDate(s.completedDate)}</p>
+        <table>${rows}</table>
+        <button id="closeSurveyView" style="margin-top:14px">Kapat</button>
+      </div></div>`;
+    }
+  }
+
+  // ---- Tetkik (kan tahlili) bölümü ----
+  const cats = [...new Set(TETKIK_TESTS.map(t=>t.cat))];
+  const tetkikChecks = cats.map(cat => {
+    const items = TETKIK_TESTS.filter(t=>t.cat===cat).map((t,i) => {
+      const idx = TETKIK_TESTS.indexOf(t);
+      return `<label style="display:block;padding:4px 0"><input type="checkbox" class="tetkikCheck" value="${idx}" checked style="width:auto;margin-right:8px"/> <b>${t.name}</b> <span style="color:#718096;font-size:12px">— ${t.why}</span></label>`;
+    }).join('');
+    return `<div style="margin-bottom:10px"><div style="font-weight:700;color:#2c7a7b;margin-bottom:4px">${cat}</div>${items}</div>`;
+  }).join('');
+
+  const tetkikClientOpts = db.clients.filter(c=>c.active).map(c =>
+    `<label style="display:block;padding:4px"><input type="checkbox" class="tetkikClient" value="${c.id}" style="width:auto;margin-right:8px"/> ${c.name}</label>`
+  ).join('') || '<p style="color:#718096">Aktif danışan yok</p>';
+
+  const tetkikSent = db.tetkikRequests.slice().reverse().map(r => {
+    const c = db.clients.find(x=>x.id===r.clientId);
+    return `<tr>
+      <td>${fmtDate(r.date)}</td>
+      <td>${c?c.name:'?'}</td>
+      <td>${r.tests.length} tetkik</td>
+      <td class="actions">
+        <button class="secondary" data-tetpdf="${r.id}">PDF</button>
+        <button class="danger" data-deltet="${r.id}">Sil</button>
+      </td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="4" style="text-align:center;color:#718096">Tetkik gönderilmedi</td></tr>`;
+
+  const tetkikResultsRows = db.tetkikResults.slice().reverse().map(r => {
+    const c = db.clients.find(x=>x.id===r.clientId);
+    return `<tr>
+      <td>${fmtDate(r.date)}</td>
+      <td>${c?c.name:'?'}</td>
+      <td>${r.fileName}</td>
+      <td class="actions">
+        <a href="${r.dataUrl}" download="${r.fileName}" style="display:inline-block;background:#4a5568;color:#fff;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600">İndir</a>
+        ${r.fileType.startsWith('image/') ? `<button data-viewres="${r.id}">Görüntüle</button>` : ''}
+        <button class="danger" data-delres="${r.id}">Sil</button>
+      </td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="4" style="text-align:center;color:#718096">Henüz sonuç gelmedi</td></tr>`;
+
+  let resultModal = '';
+  if (view.viewTetkikResultId) {
+    const r = db.tetkikResults.find(x=>x.id===view.viewTetkikResultId);
+    if (r && r.fileType.startsWith('image/')) {
+      const c = db.clients.find(x=>x.id===r.clientId);
+      resultModal = `<div class="modal-bg"><div class="modal" style="max-width:720px">
+        <h3>${c?c.name:''} - ${r.fileName}</h3>
+        <p style="color:#718096;font-size:12px">${fmtDate(r.date)}</p>
+        <img src="${r.dataUrl}" style="max-width:100%;border-radius:8px" />
+        <button id="closeResView" style="margin-top:14px">Kapat</button>
+      </div></div>`;
+    }
+  }
+
+  return `
+    <div class="card">
+      <h3>Yeni Anket Gönder</h3>
+      <p style="color:#4a5568;font-size:13px;margin:0 0 8px">Göndermek istediğiniz soruları işaretleyin:</p>
+      <div class="multi-select">${qChecks}</div>
+      <h3 style="margin-top:16px">Danışan Seç</h3>
+      <div class="multi-select">${clientOpts}</div>
+      <button id="sendSurvey" style="margin-top:10px">📤 Anketi Gönder</button>
+      <div class="error" id="sErr"></div>
+    </div>
+    <div class="card">
+      <h3>Gönderilen Anketler</h3>
+      <table>
+        <thead><tr><th>Tarih</th><th>Danışan</th><th>Durum</th><th>İşlem</th></tr></thead>
+        <tbody>${list}</tbody>
+      </table>
+    </div>
+
+    <div class="card" style="border-top:4px solid #2c7a7b">
+      <h3>🧪 Tetkik (Kan Tahlilleri) Gönder</h3>
+      <p style="color:#4a5568;font-size:13px;margin:0 0 8px">Danışana göndermek istediğiniz tahlilleri işaretleyin:</p>
+      <div class="multi-select" style="max-height:340px">${tetkikChecks}</div>
+      <h3 style="margin-top:16px">Açıklama</h3>
+      <textarea id="tetkikNote" style="min-height:80px">${DEFAULT_TETKIK_NOTE}</textarea>
+      <h3 style="margin-top:16px">Danışan Seç</h3>
+      <div class="multi-select">${tetkikClientOpts}</div>
+      <button id="sendTetkik" style="margin-top:10px">📤 Tetkik Gönder</button>
+      <div class="error" id="tetErr"></div>
+    </div>
+    <div class="card">
+      <h3>Gönderilen Tetkikler</h3>
+      <table>
+        <thead><tr><th>Tarih</th><th>Danışan</th><th>İçerik</th><th>İşlem</th></tr></thead>
+        <tbody>${tetkikSent}</tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>📥 Gelen Tetkik Sonuçları</h3>
+      <table>
+        <thead><tr><th>Tarih</th><th>Danışan</th><th>Dosya</th><th>İşlem</th></tr></thead>
+        <tbody>${tetkikResultsRows}</tbody>
+      </table>
+    </div>
+    ${detail}
+    ${resultModal}`;
+}
+
+function weightsTab() {
+  const list = db.clients.map(c => `
+    <tr>
+      <td>${c.name}</td>
+      <td>${db.weights.filter(w=>w.clientId===c.id).length} kayıt</td>
+      <td class="actions"><button data-vw="${c.id}">Kiloları Gör</button></td>
+    </tr>`).join('') || `<tr><td colspan="3" style="text-align:center;color:#718096">Danışan yok</td></tr>`;
+
+  let detail = '';
+  if (view.weightClientId) {
+    const c = db.clients.find(x=>x.id===view.weightClientId);
+    const ws = db.weights.filter(w=>w.clientId===view.weightClientId).sort((a,b)=>b.date-a.date);
+    const mode = view.weightGroup || 'all';
+    let body = '';
+    if (!ws.length) {
+      body = `<table><thead><tr><th>Tarih</th><th>Kilo</th><th>İşlem</th></tr></thead><tbody><tr><td colspan="3" style="text-align:center;color:#718096">Kayıt yok</td></tr></tbody></table>`;
+    } else if (mode === 'all') {
+      const vals = ws.map(w=>w.weight);
+      const avg = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
+      const min = Math.min(...vals).toFixed(1);
+      const max = Math.max(...vals).toFixed(1);
+      const sorted = ws.slice().sort((a,b)=>a.date-b.date);
+      const diff = (sorted[sorted.length-1].weight - sorted[0].weight).toFixed(1);
+      const diffColor = diff > 0 ? '#c53030' : diff < 0 ? '#22543d' : '#718096';
+      const rows = ws.map(w=>`<tr><td>${fmtDate(w.date)}</td><td>${w.weight} kg</td><td class="actions"><button class="danger" data-delw="${w.id}">Sil</button></td></tr>`).join('');
+      body = `<div style="background:#f7fafc;padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:13px;color:#4a5568">
+          ${ws.length} kayıt · Ort: <b>${avg}</b> · Min: ${min} · Max: ${max} ·
+          Değişim: <b style="color:${diffColor}">${diff>0?'+':''}${diff} kg</b>
+        </div>
+        <table><thead><tr><th>Tarih</th><th>Kilo</th><th>İşlem</th></tr></thead><tbody>${rows}</tbody></table>`;
+    } else {
+      const groups = {};
+      const keyOf = (d) => {
+        const dt = new Date(d);
+        if (mode === 'month') {
+          return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0');
+        }
+        const tmp = new Date(Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate()));
+        const day = tmp.getUTCDay() || 7;
+        tmp.setUTCDate(tmp.getUTCDate() + 4 - day);
+        const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(),0,1));
+        const wk = Math.ceil((((tmp - yearStart) / 86400000) + 1) / 7);
+        return tmp.getUTCFullYear() + '-H' + String(wk).padStart(2,'0');
+      };
+      const labelOf = (d, k) => {
+        const dt = new Date(d);
+        if (mode === 'month') {
+          return dt.toLocaleDateString('tr-TR', { year:'numeric', month:'long' });
+        }
+        const day = dt.getDay() || 7;
+        const monday = new Date(dt); monday.setDate(dt.getDate() - (day-1));
+        const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+        const fmt = x => x.toLocaleDateString('tr-TR',{day:'2-digit',month:'short'});
+        return k.split('-H')[1] + '. Hafta ('+fmt(monday)+' - '+fmt(sunday)+')';
+      };
+      ws.forEach(w => {
+        const k = keyOf(w.date);
+        if (!groups[k]) groups[k] = { label: labelOf(w.date, k), items: [] };
+        groups[k].items.push(w);
+      });
+      const keys = Object.keys(groups).sort().reverse();
+      body = keys.map(k => {
+        const g = groups[k];
+        const vals = g.items.map(i=>i.weight);
+        const avg = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
+        const min = Math.min(...vals).toFixed(1);
+        const max = Math.max(...vals).toFixed(1);
+        const sorted = g.items.slice().sort((a,b)=>a.date-b.date);
+        const diff = (sorted[sorted.length-1].weight - sorted[0].weight).toFixed(1);
+        const diffColor = diff > 0 ? '#c53030' : diff < 0 ? '#22543d' : '#718096';
+        const rows = g.items.map(w=>`<tr><td>${fmtDate(w.date)}</td><td>${w.weight} kg</td><td class="actions"><button class="danger" data-delw="${w.id}">Sil</button></td></tr>`).join('');
+        return `<div style="border:1px solid #e2e8f0;border-radius:8px;margin-bottom:12px;overflow:hidden">
+          <div style="background:#f7fafc;padding:10px 14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center">
+            <strong style="color:#2c7a7b">${g.label}</strong>
+            <span style="font-size:13px;color:#4a5568">
+              ${g.items.length} kayıt · Ort: <b>${avg}</b> · Min: ${min} · Max: ${max} ·
+              Değişim: <b style="color:${diffColor}">${diff>0?'+':''}${diff} kg</b>
+            </span>
+          </div>
+          <table style="margin:0"><thead><tr><th>Tarih</th><th>Kilo</th><th>İşlem</th></tr></thead><tbody>${rows}</tbody></table>
+        </div>`;
+      }).join('');
+    }
+    const btn = (m, label) => `<button class="${mode===m?'':'secondary'}" data-wg="${m}" style="width:auto;padding:8px 14px;margin:0">${label}</button>`;
+    detail = `<div class="card">
+      <h3>${c?c.name:''} - Kilo Geçmişi</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        ${btn('all','Tümü')} ${btn('week','Haftalık')} ${btn('month','Aylık')}
+      </div>
+      ${body}
+      <button class="secondary" id="closeW" style="width:auto;margin-top:10px">Kapat</button>
+    </div>`;
+  }
+
+  return `
+    <div class="card">
+      <h3>Danışan Kilo Takibi</h3>
+      <table>
+        <thead><tr><th>Danışan</th><th>Kayıt Sayısı</th><th>İşlem</th></tr></thead>
+        <tbody>${list}</tbody>
+      </table>
+    </div>
+    ${detail}`;
+}
+
+// ---------- Client View ----------
+function clientView() {
+  const c = db.clients.find(x=>x.id===session.clientId);
+  const diets = db.diets.filter(d=>d.clientId===c.id).sort((a,b)=>b.date-a.date);
+  const paid = c.payment === 'alindi';
+  const dietRows = diets.map(d=>{
+    const isPdf = !!d.fileName;
+    const dl = isPdf && paid ? `<a href="${d.fileData}" download="${d.fileName}"><button class="secondary" type="button">📎 PDF İndir</button></a>`
+            : (!isPdf && paid ? `<button class="secondary" data-pdf="${d.id}">PDF İndir</button>` : '');
+    return `<tr>
+      <td>${fmtDate(d.date)}</td><td>${d.title}${isPdf?' <span style="color:#718096;font-size:11px">📎 PDF</span>':''}</td>
+      <td class="actions">
+        <button data-viewd="${d.id}" ${paid?'':'disabled style="opacity:.5;cursor:not-allowed"'}>Görüntüle</button>
+        ${dl || (!paid ? `<button class="secondary" disabled style="opacity:.5;cursor:not-allowed">PDF İndir</button>` : '')}
+      </td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="3" style="text-align:center;color:#718096">Henüz diyet gönderilmedi</td></tr>`;
+
+  const paymentWarning = !paid ? `<div style="background:#fed7d7;color:#742a2a;padding:12px 16px;border-radius:8px;margin-bottom:14px;font-weight:600;text-align:center">⚠️ Lütfen ödemenizi yapınız. Ödemeniz onaylanmadan diyet programınızı görüntüleyemez veya indiremezsiniz.</div>` : '';
+
+  const myWeights = db.weights.filter(w=>w.clientId===c.id).sort((a,b)=>b.date-a.date);
+  const wRows = myWeights.map(w=>{
+    const isEditing = view.editWeightId === w.id;
+    if (isEditing) {
+      return `<tr><td>${fmtDate(w.date)}</td><td><input id="editW_${w.id}" type="number" step="0.1" value="${w.weight}" style="margin:0;padding:6px;width:100px" /></td><td class="actions"><button data-savew="${w.id}">Kaydet</button> <button class="secondary" data-cancelw="${w.id}">İptal</button></td></tr>`;
+    }
+    return `<tr><td>${fmtDate(w.date)}</td><td>${w.weight} kg</td><td class="actions"><button data-editw="${w.id}">Düzenle</button></td></tr>`;
+  }).join('') || `<tr><td colspan="3" style="text-align:center;color:#718096">Kayıt yok</td></tr>`;
+
+  const mySurveys = db.surveys.filter(s=>s.clientId===c.id).sort((a,b)=>b.date-a.date);
+  const surveyRows = mySurveys.map(s => {
+    const status = s.completedDate ? '<span class="badge active">Tamamlandı</span>' : '<span class="badge passive">Bekliyor</span>';
+    return `<tr>
+      <td>${fmtDate(s.date)}</td>
+      <td>${status}</td>
+      <td class="actions">${s.completedDate ? `<button class="secondary" data-vsc="${s.id}">Yanıtlarımı Gör</button>` : `<button data-fills="${s.id}">Doldur</button>`}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="3" style="text-align:center;color:#718096">Anket yok</td></tr>`;
+
+  let surveyModal = '';
+  if (view.fillSurveyId) {
+    const s = db.surveys.find(x=>x.id===view.fillSurveyId);
+    if (s) {
+      const readonly = !!s.completedDate;
+      const fields = s.questions.map(qid => {
+        const q = SURVEY_QUESTIONS.find(x=>x.id===qid); if (!q) return '';
+        const a = (s.answers && s.answers[qid]) || {};
+        if (q.type === 'yesno') {
+          const yes = a.value === 'evet';
+          const no = a.value === 'hayir';
+          return `<div style="margin:10px 0;padding:10px;border:1px solid #e2e8f0;border-radius:8px">
+            <label style="display:block;font-weight:600;margin-bottom:6px">${q.text}</label>
+            <label style="display:inline-flex;align-items:center;gap:6px;margin-right:14px"><input type="radio" name="r_${qid}" value="evet" ${yes?'checked':''} ${readonly?'disabled':''} style="width:auto;margin:0" class="sa-yesno" data-qid="${qid}"/> Evet</label>
+            <label style="display:inline-flex;align-items:center;gap:6px"><input type="radio" name="r_${qid}" value="hayir" ${no?'checked':''} ${readonly?'disabled':''} style="width:auto;margin:0" class="sa-yesno" data-qid="${qid}"/> Hayır</label>
+            <div id="detail_${qid}" style="display:${yes?'block':'none'};margin-top:8px">
+              <input type="text" class="sa-detail" data-qid="${qid}" placeholder="Açıklama" value="${(a.detail||'').replace(/"/g,'&quot;')}" ${readonly?'disabled':''} />
+            </div>
+          </div>`;
+        }
+        return `<div style="margin:10px 0">
+          <label style="display:block;font-weight:600;margin-bottom:4px">${q.text}</label>
+          <input type="text" class="sa-text" data-qid="${qid}" value="${(a.value||'').replace(/"/g,'&quot;')}" ${readonly?'disabled':''} />
+        </div>`;
+      }).join('');
+      surveyModal = `<div class="modal-bg"><div class="modal" style="max-width:640px">
+        <h3>📋 Anket ${readonly ? '(Tamamlandı)' : ''}</h3>
+        ${fields}
+        <div class="row" style="margin-top:10px">
+          ${readonly ? '' : '<button id="submitSurvey">📤 Gönder</button>'}
+          <button class="secondary" id="closeFillSurvey">${readonly?'Kapat':'İptal'}</button>
+        </div>
+        <div class="error" id="fsErr"></div>
+      </div></div>`;
+    }
+  }
+
+  // ---- Tetkik (client) ----
+  const myTetkikReqs = db.tetkikRequests.filter(r=>r.clientId===c.id).sort((a,b)=>b.date-a.date);
+  const tetkikReqRows = myTetkikReqs.map(r => `
+    <tr>
+      <td>${fmtDate(r.date)}</td>
+      <td>${r.tests.length} tetkik</td>
+      <td class="actions">
+        <button data-vtet="${r.id}">Görüntüle</button>
+        <button class="secondary" data-tetpdfc="${r.id}">PDF İndir</button>
+      </td>
+    </tr>`).join('') || `<tr><td colspan="3" style="text-align:center;color:#718096">Tetkik isteği yok</td></tr>`;
+
+  const myResults = db.tetkikResults.filter(r=>r.clientId===c.id).sort((a,b)=>b.date-a.date);
+  const myResultRows = myResults.map(r => `
+    <tr>
+      <td>${fmtDate(r.date)}</td>
+      <td>${r.fileName}</td>
+      <td class="actions"><button class="danger" data-delmyres="${r.id}">Sil</button></td>
+    </tr>`).join('') || `<tr><td colspan="3" style="text-align:center;color:#718096">Henüz sonuç göndermediniz</td></tr>`;
+
+  let tetkikModal = '';
+  if (view.viewMyTetkikId) {
+    const r = db.tetkikRequests.find(x=>x.id===view.viewMyTetkikId);
+    if (r) {
+      const grouped = {};
+      r.tests.forEach(idx => {
+        const t = TETKIK_TESTS[idx]; if (!t) return;
+        if (!grouped[t.cat]) grouped[t.cat] = [];
+        grouped[t.cat].push(t);
+      });
+      const body = Object.keys(grouped).map(cat => `
+        <div style="margin-bottom:10px">
+          <div style="font-weight:700;color:#2c7a7b">${cat}</div>
+          ${grouped[cat].map(t => `<div style="padding:4px 0 4px 12px;border-bottom:1px solid #edf2f7"><b>${t.name}</b> <span style="color:#718096;font-size:12px">— ${t.why}</span></div>`).join('')}
+        </div>`).join('');
+      tetkikModal = `<div class="modal-bg"><div class="modal" style="max-width:640px">
+        <h3>🧪 Tetkik Listesi</h3>
+        <p style="color:#718096;font-size:12px">${fmtDate(r.date)}</p>
+        ${body}
+        ${r.note ? `<div style="background:#fef5e7;border-left:4px solid #d69e2e;padding:10px;border-radius:6px;margin-top:10px"><b>Açıklama:</b><br>${r.note.replace(/</g,'&lt;')}</div>` : ''}
+        <button id="closeTetView" style="margin-top:14px">Kapat</button>
+      </div></div>`;
+    }
+  }
+
+  let dietModal = '';
+  if (view.selectedClientId) {
+    const d = db.diets.find(x=>x.id===view.selectedClientId);
+    if (d) {
+      const body = d.fileName
+        ? `<p style="margin:10px 0">PDF Diyet Programı: <a href="${d.fileData}" download="${d.fileName}" style="color:#2c7a7b;font-weight:600">📎 ${d.fileName}</a></p>
+           <iframe src="${d.fileData}" style="width:100%;height:60vh;border:1px solid #e2e8f0;border-radius:8px"></iframe>`
+        : `<div class="diet-box">${(d.content||'').replace(/</g,'&lt;')}</div>`;
+      dietModal = `<div class="modal-bg"><div class="modal" style="max-width:720px">
+        <h3>${d.title}</h3>
+        <p style="color:#718096;font-size:12px">${fmtDate(d.date)}</p>
+        ${body}
+        <button id="closeDiet" style="margin-top:14px">Kapat</button>
+      </div></div>`;
+    }
+  }
+
+  return `
+    <header>
+      <h1 id="appTitle" style="cursor:pointer;user-select:none;margin:0" title="Yenile">${brandLogo('Hoşgeldin, ' + c.name)}</h1>
+      <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
+        ${headerScheduleHtml(c)}
+        ${notificationBellHtml()}
+        <button id="changePwBtn" title="Şifre Değiştir" style="width:auto;padding:8px 12px;background:#285e61;font-size:18px;margin:0">🔑</button>
+        <button id="logout" style="width:auto;background:#285e61">Çıkış</button>
+      </div>
+    </header>
+    ${notificationsModalHtml()}
+    ${changePasswordModalHtml()}
+    <div class="container">
+      <div class="card">
+        ${paymentWarning}
+        <h3>📋 Diyet Programlarım ${c.period ? `<span class="badge active" style="font-size:13px;margin-left:8px">${c.period==='30'?'Aylık Periyot':c.period+' Günlük Periyot'}</span>` : ''}</h3>
+        <table>
+          <thead><tr><th>Tarih</th><th>Başlık</th><th>İşlem</th></tr></thead>
+          <tbody>${dietRows}</tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>⚖️ Kilo Kaydı</h3>
+        <div class="row">
+          <input id="newW" type="number" step="0.1" placeholder="Bugünkü kilonuz (kg)" />
+          <button id="addW" style="flex:0 0 150px">Kilo Ekle</button>
+        </div>
+        <h3 style="margin-top:20px">Kilo Geçmişim</h3>
+        <table><thead><tr><th>Tarih</th><th>Kilo</th><th>İşlem</th></tr></thead><tbody>${wRows}</tbody></table>
+      </div>
+      <div class="card">
+        <h3>📋 Anketlerim</h3>
+        <table>
+          <thead><tr><th>Tarih</th><th>Durum</th><th>İşlem</th></tr></thead>
+          <tbody>${surveyRows}</tbody>
+        </table>
+      </div>
+      <div class="card" style="border-top:4px solid #2c7a7b">
+        <h3>🧪 Tetkiklerim</h3>
+        <table>
+          <thead><tr><th>Tarih</th><th>İçerik</th><th>İşlem</th></tr></thead>
+          <tbody>${tetkikReqRows}</tbody>
+        </table>
+        <h3 style="margin-top:18px">📎 Sonuç Gönder (PDF veya Fotoğraf)</h3>
+        <p style="color:#4a5568;font-size:13px;margin:4px 0 8px">Tahlil sonuçlarınızın PDF veya fotoğrafını diyetisyeninize gönderebilirsiniz.</p>
+        <input id="resultFile" type="file" accept="image/*,application/pdf" style="margin:0" />
+        <button id="uploadResult" style="margin-top:8px">📤 Gönder</button>
+        <div class="error" id="resErr"></div>
+        <h3 style="margin-top:18px">Gönderdiğim Sonuçlar</h3>
+        <table>
+          <thead><tr><th>Tarih</th><th>Dosya</th><th>İşlem</th></tr></thead>
+          <tbody>${myResultRows}</tbody>
+        </table>
+      </div>
+    </div>
+    ${dietModal}
+    ${surveyModal}
+    ${tetkikModal}`;
+}
+
+// ---------- Events ----------
+function bindEvents() {
+  if (!session) {
+    $('#loginBtn').onclick = doLogin;
+    $('#p').onkeydown = e => { if (e.key==='Enter') doLogin(); };
+    $('#togglePw').onclick = () => {
+      const p = $('#p');
+      p.type = p.type === 'password' ? 'text' : 'password';
+      $('#togglePw').textContent = p.type === 'password' ? '👁️' : '🙈';
+    };
+    $('#keepOpen').onchange = () => {
+      localStorage.setItem('diyet_keep_open', $('#keepOpen').checked ? '1' : '0');
+    };
+    return;
+  }
+  if ($('#appTitle')) $('#appTitle').onclick = () => location.reload();
+  $('#logout').onclick = () => {
+    if (session.role === 'client') {
+      const c = db.clients.find(x=>x.id===session.clientId);
+      if (c) { c.lastSeen = Date.now(); c.onlineUntil = 0; save(); }
+    }
+    if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+    if (dietitianRefreshTimer) { clearInterval(dietitianRefreshTimer); dietitianRefreshTimer = null; }
+    session = null; localStorage.removeItem('diyet_session'); view = {tab:'clients',selectedClientId:null,weightClientId:null}; render();
+  };
+  if (session.role === 'client' && !heartbeatTimer) startHeartbeat();
+  if (session.role === 'dietitian' && !dietitianRefreshTimer) startDietitianRefresh();
+
+  // Notification bell + modal
+  if ($('#bellBtn')) $('#bellBtn').onclick = () => {
+    const t = myLogTarget();
+    (db.notificationsLog||[]).forEach(n => { if (n.target===t) n.read = true; });
+    save(); view.showNotifications = true; render();
+  };
+  if ($('#closeNotif')) $('#closeNotif').onclick = () => { view.showNotifications = false; render(); };
+  document.querySelectorAll('[data-deln]').forEach(b => b.onclick = () => {
+    db.notificationsLog = (db.notificationsLog||[]).filter(n=>n.id!==b.dataset.deln); save(); render();
+  });
+  if ($('#delAllNotif')) $('#delAllNotif').onclick = () => {
+    if (!confirm('Tüm bildirimler silinsin mi?')) return;
+    const t = myLogTarget();
+    db.notificationsLog = (db.notificationsLog||[]).filter(n=>n.target!==t); save(); render();
+  };
+
+  // Password change (client only)
+  if ($('#changePwBtn')) $('#changePwBtn').onclick = () => { view.showChangePw = true; render(); };
+  if ($('#cancelPw')) $('#cancelPw').onclick = () => { view.showChangePw = false; render(); };
+  if ($('#savePw')) $('#savePw').onclick = () => {
+    const c = db.clients.find(x=>x.id===session.clientId);
+    const oldP = $('#oldPw').value, n1 = $('#newPw').value, n2 = $('#newPw2').value;
+    if (!c) return;
+    if (oldP !== c.password) { $('#pwErr').textContent = 'Mevcut şifre yanlış'; return; }
+    if (n1.length < 4) { $('#pwErr').textContent = 'Yeni şifre en az 4 karakter olmalı'; return; }
+    if (n1 !== n2) { $('#pwErr').textContent = 'Yeni şifreler eşleşmiyor'; return; }
+    c.password = n1; save(); view.showChangePw = false; alert('Şifre değiştirildi'); render();
+  };
+
+  if (session.role === 'dietitian') {
+    document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { view.tab = b.dataset.tab; view.weightClientId=null; view.detailClientId=null; render(); });
+
+    if (view.detailClientId) {
+      const cid = view.detailClientId;
+      if ($('#backFromDetail')) $('#backFromDetail').onclick = () => { view.detailClientId = null; view.viewDietId = null; view.viewSurveyId = null; view.viewTestId = null; render(); };
+      document.querySelectorAll('[data-viewdd]').forEach(b => b.onclick = () => { view.viewDietId = b.dataset.viewdd; render(); });
+      if ($('#closeDietView')) $('#closeDietView').onclick = () => { view.viewDietId = null; render(); };
+      document.querySelectorAll('[data-vs]').forEach(b => b.onclick = () => { view.viewSurveyId = b.dataset.vs; render(); });
+      if ($('#closeSurveyView')) $('#closeSurveyView').onclick = () => { view.viewSurveyId = null; render(); };
+      document.querySelectorAll('[data-viewtt]').forEach(b => b.onclick = () => { view.viewTestId = b.dataset.viewtt; render(); });
+      if ($('#closeTestView')) $('#closeTestView').onclick = () => { view.viewTestId = null; render(); };
+
+      document.querySelectorAll('[data-deldd]').forEach(b => b.onclick = () => {
+        if (!confirm('Diyet silinsin mi?')) return;
+        db.diets = db.diets.filter(d=>d.id!==b.dataset.deldd); save(); render();
+      });
+      document.querySelectorAll('[data-delw]').forEach(b => b.onclick = () => {
+        if (!confirm('Kilo kaydı silinsin mi?')) return;
+        db.weights = db.weights.filter(w=>w.id!==b.dataset.delw); save(); render();
+      });
+      document.querySelectorAll('[data-dels]').forEach(b => b.onclick = () => {
+        if (!confirm('Anket silinsin mi?')) return;
+        db.surveys = db.surveys.filter(s=>s.id!==b.dataset.dels); save(); render();
+      });
+      document.querySelectorAll('[data-deltt]').forEach(b => b.onclick = () => {
+        if (!confirm('Tetkik silinsin mi?')) return;
+        db.tests = (db.tests||[]).filter(t=>t.id!==b.dataset.deltt); save(); render();
+      });
+
+      document.querySelectorAll('[data-period]').forEach(s => s.onchange = () => {
+        const cc = db.clients.find(x=>x.id===s.dataset.period); cc.period = s.value; save();
+      });
+      document.querySelectorAll('[data-payment]').forEach(s => s.onchange = () => {
+        const cc = db.clients.find(x=>x.id===s.dataset.payment); cc.payment = s.value; save(); render();
+      });
+      document.querySelectorAll('[data-toggle]').forEach(b => b.onclick = () => {
+        const cc = db.clients.find(x=>x.id===b.dataset.toggle); cc.active = !cc.active; save(); render();
+      });
+      document.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => { view.editClientId = b.dataset.edit; render(); });
+      if ($('#cancelEditClient')) $('#cancelEditClient').onclick = () => { view.editClientId = null; render(); };
+      if ($('#saveEditClient')) $('#saveEditClient').onclick = () => {
+        const cc = db.clients.find(x=>x.id===view.editClientId); if (!cc) return;
+        const name = $('#eName').value.trim(), phone = $('#ePhone').value.trim(), u = $('#eUser').value.trim(), p = $('#ePass').value.trim();
+        if (!name || !phone || !u || !p) { $('#eErr').textContent='Tüm alanları doldurun'; return; }
+        if (u !== cc.username && (u === db.dietitian.username || db.clients.find(x=>x.username===u))) { $('#eErr').textContent='Bu kullanıcı adı zaten kullanılıyor'; return; }
+        cc.name = name; cc.phone = phone; cc.username = u; cc.password = p;
+        view.editClientId = null; save(); render();
+      };
+      document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+        if (!confirm('Danışan ve tüm verileri silinecek. Emin misiniz?')) return;
+        const id = b.dataset.del;
+        db.clients = db.clients.filter(x=>x.id!==id);
+        db.diets = db.diets.filter(d=>d.clientId!==id);
+        db.weights = db.weights.filter(w=>w.clientId!==id);
+        db.surveys = (db.surveys||[]).filter(s=>s.clientId!==id);
+        db.tests = (db.tests||[]).filter(t=>t.clientId!==id);
+        view.detailClientId = null; save(); render();
+      });
+
+      if ($('#quickSendDiet')) $('#quickSendDiet').onclick = () => {
+        const title = prompt('Diyet başlığı:'); if (!title) return;
+        const content = prompt('Diyet içeriği:'); if (!content) return;
+        db.diets.push({id:uid(), clientId:cid, title, content, date:Date.now()});
+        const cc = db.clients.find(x=>x.id===cid);
+        if (cc) { if (!cc.notifications) cc.notifications = []; cc.notifications.push({id:uid(), title:'📋 Yeni Diyet', body:title, date:Date.now()}); }
+        save(); render();
+      };
+
+      if ($('#addTest')) $('#addTest').onclick = () => {
+        const title = $('#testTitle').value.trim();
+        const content = $('#testContent').value.trim();
+        const fileInput = $('#testFile');
+        if (!title) { $('#testErr').textContent='Başlık gerekli'; return; }
+        const finish = (fileName, fileData) => {
+          if (!db.tests) db.tests = [];
+          db.tests.push({id:uid(), clientId:cid, title, content, fileName, fileData, date:Date.now()});
+          const cc = db.clients.find(x=>x.id===cid);
+          if (cc) { if (!cc.notifications) cc.notifications = []; cc.notifications.push({id:uid(), title:'🧪 Yeni Tetkik', body:title, date:Date.now()}); }
+          save(); render();
+        };
+        if (fileInput && fileInput.files && fileInput.files[0]) {
+          const f = fileInput.files[0];
+          if (f.size > 3 * 1024 * 1024) { $('#testErr').textContent='Dosya 3MB üzeri olamaz'; return; }
+          const fr = new FileReader();
+          fr.onload = () => finish(f.name, fr.result);
+          fr.onerror = () => { $('#testErr').textContent='Dosya okunamadı'; };
+          fr.readAsDataURL(f);
+        } else {
+          finish(null, null);
+        }
+      };
+      return;
+    }
+
+    if (view.tab === 'clients') {
+      const trMap = {ç:'c',Ç:'c',ğ:'g',Ğ:'g',ı:'i',İ:'i',ö:'o',Ö:'o',ş:'s',Ş:'s',ü:'u',Ü:'u'};
+      const slug = s => s.toLowerCase().replace(/[çÇğĞıİöÖşŞüÜ]/g, m=>trMap[m]).replace(/[^a-z0-9]/g,'');
+      if ($('#openAddClient')) $('#openAddClient').onclick = () => { view.showAddClient = true; render(); };
+      if ($('#cancelAddClient')) $('#cancelAddClient').onclick = () => { view.showAddClient = false; render(); };
+      document.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => { view.editClientId = b.dataset.edit; render(); });
+      document.querySelectorAll('[data-detail]').forEach(b => b.onclick = () => { view.detailClientId = b.dataset.detail; render(); });
+      if ($('#cancelEditClient')) $('#cancelEditClient').onclick = () => { view.editClientId = null; render(); };
+      if ($('#saveEditClient')) $('#saveEditClient').onclick = () => {
+        const c = db.clients.find(x=>x.id===view.editClientId); if (!c) return;
+        const name = $('#eName').value.trim(), phone = $('#ePhone').value.trim(), u = $('#eUser').value.trim(), p = $('#ePass').value.trim();
+        if (!name || !phone || !u || !p) { $('#eErr').textContent='Tüm alanları doldurun'; return; }
+        if (u !== c.username && (u === db.dietitian.username || db.clients.find(x=>x.username===u))) { $('#eErr').textContent='Bu kullanıcı adı zaten kullanılıyor'; return; }
+        c.name = name; c.phone = phone; c.username = u; c.password = p;
+        view.editClientId = null; save(); render();
+      };
+      if ($('#cFirstName') && $('#cLastName')) {
+        const autoFill = () => {
+          const first = slug($('#cFirstName').value.trim());
+          const last = slug($('#cLastName').value.trim().replace(/\s+/g,''));
+          if (first && last) {
+            $('#cUser').value = (first[0]||'') + last;
+            $('#cPass').value = last;
+          } else {
+            $('#cUser').value = ''; $('#cPass').value = '';
+          }
+        };
+        $('#cFirstName').oninput = autoFill;
+        $('#cLastName').oninput = autoFill;
+      }
+      if ($('#addClient')) $('#addClient').onclick = () => {
+        const firstName = $('#cFirstName').value.trim(), lastName = $('#cLastName').value.trim();
+        const phone = $('#cPhone').value.trim(), u = $('#cUser').value.trim(), p = $('#cPass').value.trim();
+        const name = firstName + ' ' + lastName;
+        if (!firstName || !lastName || !phone || !u || !p) { $('#cErr').textContent='Tüm alanları doldurun'; return; }
+        if (u === db.dietitian.username || db.clients.find(c=>c.username===u)) { $('#cErr').textContent='Bu kullanıcı adı zaten kullanılıyor'; return; }
+        db.clients.push({id:uid(), name, firstName, lastName, phone, username:u, password:p, active:true});
+        view.showAddClient = false;
+        save(); render();
+      };
+      document.querySelectorAll('[data-toggle]').forEach(b => b.onclick = () => {
+        const c = db.clients.find(x=>x.id===b.dataset.toggle); c.active = !c.active; save(); render();
+      });
+      document.querySelectorAll('[data-period]').forEach(s => s.onchange = () => {
+        const c = db.clients.find(x=>x.id===s.dataset.period); c.period = s.value; save();
+      });
+      document.querySelectorAll('[data-payment]').forEach(s => s.onchange = () => {
+        const c = db.clients.find(x=>x.id===s.dataset.payment); c.payment = s.value; save(); render();
+      });
+      document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+        if (!confirm('Danışan ve tüm verileri silinecek. Emin misiniz?')) return;
+        const id = b.dataset.del;
+        db.clients = db.clients.filter(c=>c.id!==id);
+        db.diets = db.diets.filter(d=>d.clientId!==id);
+        db.weights = db.weights.filter(w=>w.clientId!==id);
+        save(); render();
+      });
+    }
+
+    if (view.tab === 'diet') {
+      $('#sendDiet').onclick = () => {
+        const title = $('#dTitle').value.trim(), content = $('#dContent').value.trim();
+        const ids = [...document.querySelectorAll('.dietClient:checked')].map(x=>x.value);
+        if (!title || !content) { $('#dErr').textContent='Başlık ve içerik gerekli'; return; }
+        if (!ids.length) { $('#dErr').textContent='En az bir danışan seçin'; return; }
+        const dupClients = ids.filter(cid => db.diets.some(d => d.clientId===cid && d.title===title && d.content===content))
+          .map(cid => { const cc = db.clients.find(x=>x.id===cid); return cc?cc.name:''; }).filter(Boolean);
+        if (dupClients.length) {
+          const ok = confirm('Bu diyeti daha önce şu danışan(lar)a gönderdiniz:\n\n' + dupClients.join(', ') + '\n\nTekrar gönderilsin mi?');
+          if (!ok) return;
+        }
+        ids.forEach(cid => {
+          db.diets.push({id:uid(), clientId:cid, title, content, date:Date.now()});
+          queueNotification(cid, '🥗 Yeni Diyet Programı', title);
+        });
+        save(); alert(ids.length+' danışana diyet gönderildi'); render();
+      };
+      document.querySelectorAll('[data-deldiet]').forEach(b => b.onclick = () => {
+        if (!confirm('Diyet silinsin mi?')) return;
+        db.diets = db.diets.filter(d=>d.id!==b.dataset.deldiet); save(); render();
+      });
+      document.querySelectorAll('[data-viewsent]').forEach(b => b.onclick = () => { view.viewSentId = b.dataset.viewsent; render(); });
+      document.querySelectorAll('[data-editsent]').forEach(b => b.onclick = () => { view.editSentId = b.dataset.editsent; render(); });
+      if ($('#closeView')) $('#closeView').onclick = () => { view.viewSentId = null; render(); };
+      if ($('#cancelEdit')) $('#cancelEdit').onclick = () => { view.editSentId = null; render(); };
+      if ($('#saveEdit')) $('#saveEdit').onclick = () => {
+        const d = db.diets.find(x=>x.id===view.editSentId);
+        const t = $('#eTitle').value.trim(), c = $('#eContent').value.trim();
+        if (!t || !c) return alert('Başlık ve içerik gerekli');
+        d.title = t; d.content = c; save(); view.editSentId = null; render();
+      };
+    }
+
+    if (view.tab === 'templates') {
+      document.querySelectorAll('[data-tplmode]').forEach(b => b.onclick = () => { view.tplMode = b.dataset.tplmode; render(); });
+      $('#saveTemplate').onclick = () => {
+        const title = $('#tTitle').value.trim();
+        if (!title) { $('#tErr').textContent='Başlık gerekli'; return; }
+        const editingT = view.editTemplateId ? db.templates.find(t=>t.id===view.editTemplateId) : null;
+        const mode = view.tplMode || (editingT && editingT.fileName ? 'pdf' : 'text');
+        const finish = (fileName, fileData, contentVal) => {
+          if (editingT) {
+            editingT.title = title;
+            if (mode === 'pdf') {
+              if (fileName) { editingT.fileName = fileName; editingT.fileData = fileData; }
+              editingT.content = '';
+            } else {
+              editingT.content = contentVal || '';
+              editingT.fileName = null; editingT.fileData = null;
+            }
+            view.editTemplateId = null;
+          } else {
+            if (mode === 'pdf') db.templates.push({id:uid(), title, content:'', fileName, fileData});
+            else db.templates.push({id:uid(), title, content:contentVal});
+          }
+          view.tplMode = null;
+          save(); render();
+        };
+        if (mode === 'pdf') {
+          const fileInput = $('#tFile');
+          const hasNewFile = fileInput && fileInput.files && fileInput.files[0];
+          if (!hasNewFile && (!editingT || !editingT.fileName)) { $('#tErr').textContent='PDF dosyası seçin'; return; }
+          if (!hasNewFile) { finish(null, null); return; }
+          const f = fileInput.files[0];
+          if (f.size > 5 * 1024 * 1024) { $('#tErr').textContent='Dosya 5MB üzeri olamaz'; return; }
+          const fr = new FileReader();
+          fr.onload = () => finish(f.name, fr.result);
+          fr.onerror = () => { $('#tErr').textContent='Dosya okunamadı'; };
+          fr.readAsDataURL(f);
+        } else {
+          const content = ($('#tContent') && $('#tContent').value.trim()) || '';
+          if (!content) { $('#tErr').textContent='İçerik gerekli'; return; }
+          finish(null, null, content);
+        }
+      };
+      if ($('#cancelEditTpl')) $('#cancelEditTpl').onclick = () => { view.editTemplateId = null; render(); };
+      document.querySelectorAll('[data-editt]').forEach(b => b.onclick = () => {
+        view.editTemplateId = b.dataset.editt;
+        const t = db.templates.find(x=>x.id===view.editTemplateId);
+        view.tplMode = t && t.fileName ? 'pdf' : 'text';
+        render();
+      });
+      document.querySelectorAll('[data-delt]').forEach(b => b.onclick = () => {
+        if (!confirm('Hazır diyet silinsin mi?')) return;
+        db.templates = db.templates.filter(t=>t.id!==b.dataset.delt); save(); render();
+      });
+      document.querySelectorAll('[data-sendt]').forEach(b => b.onclick = () => { view.sendTemplateId = b.dataset.sendt; render(); });
+      if ($('#cancelSendTpl')) $('#cancelSendTpl').onclick = () => { view.sendTemplateId = null; render(); };
+      if ($('#confirmSendTpl')) $('#confirmSendTpl').onclick = () => {
+        const t = db.templates.find(x=>x.id===view.sendTemplateId);
+        const ids = [...document.querySelectorAll('.tplClient:checked')].map(x=>x.value);
+        if (!ids.length) { $('#tplSendErr').textContent='En az bir danışan seçin'; return; }
+        const dupClients = ids.filter(cid => db.diets.some(d => d.clientId===cid && d.title===t.title && d.content===t.content))
+          .map(cid => { const cc = db.clients.find(x=>x.id===cid); return cc?cc.name:''; }).filter(Boolean);
+        if (dupClients.length) {
+          const ok = confirm('Bu diyeti daha önce şu danışan(lar)a gönderdiniz:\n\n' + dupClients.join(', ') + '\n\nTekrar gönderilsin mi?');
+          if (!ok) return;
+        }
+        ids.forEach(cid => {
+          db.diets.push({id:uid(), clientId:cid, title:t.title, content:t.content||'', fileName:t.fileName||null, fileData:t.fileData||null, date:Date.now()});
+          queueNotification(cid, '🥗 Yeni Diyet Programı', t.title);
+        });
+        save(); view.sendTemplateId = null; alert(ids.length+' danışana diyet gönderildi'); render();
+      };
+    }
+
+    if (view.tab === 'surveys') {
+      $('#sendSurvey').onclick = () => {
+        const qids = [...document.querySelectorAll('.sq:checked')].map(x=>x.value);
+        const ids = [...document.querySelectorAll('.sClient:checked')].map(x=>x.value);
+        if (!qids.length) { $('#sErr').textContent='En az bir soru seçin'; return; }
+        if (!ids.length) { $('#sErr').textContent='En az bir danışan seçin'; return; }
+        ids.forEach(cid => {
+          db.surveys.push({id:uid(), clientId:cid, questions:qids, answers:{}, date:Date.now(), completedDate:null});
+          const cc = db.clients.find(x=>x.id===cid);
+          if (cc) { if (!cc.notifications) cc.notifications = []; cc.notifications.push({id:uid(), title:'📋 Yeni Anket', body:'Diyetisyeniniz size bir anket gönderdi. Lütfen doldurun.', date:Date.now()}); }
+        });
+        save(); alert(ids.length+' danışana anket gönderildi'); render();
+      };
+      document.querySelectorAll('[data-vs]').forEach(b => b.onclick = () => { view.viewSurveyId = b.dataset.vs; render(); });
+      if ($('#closeSurveyView')) $('#closeSurveyView').onclick = () => { view.viewSurveyId = null; render(); };
+      document.querySelectorAll('[data-dels]').forEach(b => b.onclick = () => {
+        if (!confirm('Anket silinsin mi?')) return;
+        db.surveys = db.surveys.filter(s=>s.id!==b.dataset.dels); save(); render();
+      });
+
+      // Tetkik handlers
+      $('#sendTetkik').onclick = () => {
+        const tests = [...document.querySelectorAll('.tetkikCheck:checked')].map(x=>parseInt(x.value,10));
+        const ids = [...document.querySelectorAll('.tetkikClient:checked')].map(x=>x.value);
+        const note = $('#tetkikNote').value.trim();
+        if (!tests.length) { $('#tetErr').textContent='En az bir tetkik seçin'; return; }
+        if (!ids.length) { $('#tetErr').textContent='En az bir danışan seçin'; return; }
+        ids.forEach(cid => {
+          db.tetkikRequests.push({id:uid(), clientId:cid, tests, note, date:Date.now()});
+          queueNotification(cid, '🧪 Yeni Tetkik İsteği', 'Diyetisyeniniz size kan tahlili istedi.');
+        });
+        save(); alert(ids.length+' danışana tetkik gönderildi'); render();
+      };
+      document.querySelectorAll('[data-tetpdf]').forEach(b => b.onclick = () => downloadTetkikPdf(b.dataset.tetpdf));
+      document.querySelectorAll('[data-deltet]').forEach(b => b.onclick = () => {
+        if (!confirm('Tetkik silinsin mi?')) return;
+        db.tetkikRequests = db.tetkikRequests.filter(r=>r.id!==b.dataset.deltet); save(); render();
+      });
+      document.querySelectorAll('[data-viewres]').forEach(b => b.onclick = () => { view.viewTetkikResultId = b.dataset.viewres; render(); });
+      document.querySelectorAll('[data-delres]').forEach(b => b.onclick = () => {
+        if (!confirm('Sonuç silinsin mi?')) return;
+        db.tetkikResults = db.tetkikResults.filter(r=>r.id!==b.dataset.delres); save(); render();
+      });
+      if ($('#closeResView')) $('#closeResView').onclick = () => { view.viewTetkikResultId = null; render(); };
+    }
+
+    if (view.tab === 'weights') {
+      document.querySelectorAll('[data-vw]').forEach(b => b.onclick = () => { view.weightClientId = b.dataset.vw; view.weightGroup = 'all'; render(); });
+      document.querySelectorAll('[data-wg]').forEach(b => b.onclick = () => { view.weightGroup = b.dataset.wg; render(); });
+      document.querySelectorAll('[data-delw]').forEach(b => b.onclick = () => {
+        if (!confirm('Bu kilo kaydı silinsin mi?')) return;
+        db.weights = db.weights.filter(w=>w.id!==b.dataset.delw); save(); render();
+      });
+      if ($('#closeW')) $('#closeW').onclick = () => { view.weightClientId = null; view.weightGroup = 'all'; render(); };
+    }
+  } else {
+    $('#addW').onclick = () => {
+      const v = parseFloat($('#newW').value);
+      if (!v || v <= 0) return alert('Geçerli bir kilo girin');
+      db.weights.push({id:uid(), clientId:session.clientId, weight:v, date:Date.now()});
+      const me = db.clients.find(x=>x.id===session.clientId);
+      queueDietitianNotification('⚖️ Yeni Kilo Kaydı', (me?me.name:'Bir danışan') + ' kilo girişi yaptı: ' + v + ' kg');
+      save(); render();
+    };
+    document.querySelectorAll('[data-editw]').forEach(b => b.onclick = () => { view.editWeightId = b.dataset.editw; render(); });
+    document.querySelectorAll('[data-cancelw]').forEach(b => b.onclick = () => { view.editWeightId = null; render(); });
+    document.querySelectorAll('[data-savew]').forEach(b => b.onclick = () => {
+      const id = b.dataset.savew;
+      const v = parseFloat($('#editW_'+id).value);
+      if (!v || v <= 0) return alert('Geçerli bir kilo girin');
+      const w = db.weights.find(x=>x.id===id); if (!w) return;
+      w.weight = v; view.editWeightId = null; save(); render();
+    });
+    document.querySelectorAll('[data-viewd]').forEach(b => b.onclick = () => {
+      const c = db.clients.find(x=>x.id===session.clientId);
+      if (!c || c.payment !== 'alindi') { alert('⚠️ Lütfen ödemenizi yapınız.'); return; }
+      c.lastSeen = Date.now(); c.onlineUntil = Date.now() + 45000; save();
+      view.selectedClientId = b.dataset.viewd; render();
+    });
+    document.querySelectorAll('[data-fills]').forEach(b => b.onclick = () => { view.fillSurveyId = b.dataset.fills; render(); });
+    document.querySelectorAll('[data-vsc]').forEach(b => b.onclick = () => { view.fillSurveyId = b.dataset.vsc; render(); });
+    if ($('#closeFillSurvey')) $('#closeFillSurvey').onclick = () => { view.fillSurveyId = null; render(); };
+    document.querySelectorAll('.sa-yesno').forEach(r => r.onchange = () => {
+      const qid = r.dataset.qid;
+      const detail = document.getElementById('detail_'+qid);
+      if (detail) detail.style.display = (r.value==='evet' && r.checked) ? 'block' : 'none';
+    });
+    if ($('#submitSurvey')) $('#submitSurvey').onclick = () => {
+      const s = db.surveys.find(x=>x.id===view.fillSurveyId); if (!s) return;
+      const answers = {};
+      let missing = false;
+      s.questions.forEach(qid => {
+        const q = SURVEY_QUESTIONS.find(x=>x.id===qid); if (!q) return;
+        if (q.type === 'yesno') {
+          const sel = document.querySelector('.sa-yesno[data-qid="'+qid+'"]:checked');
+          if (!sel) { missing = true; return; }
+          const detail = sel.value === 'evet' ? (document.querySelector('.sa-detail[data-qid="'+qid+'"]').value.trim()) : '';
+          if (sel.value === 'evet' && !detail) { missing = true; return; }
+          answers[qid] = { value: sel.value, detail };
+        } else {
+          const v = document.querySelector('.sa-text[data-qid="'+qid+'"]').value.trim();
+          if (!v) { missing = true; return; }
+          answers[qid] = { value: v };
+        }
+      });
+      if (missing) { $('#fsErr').textContent='Lütfen tüm soruları yanıtlayın (evet için açıklama dahil)'; return; }
+      s.answers = answers; s.completedDate = Date.now();
+      const me = db.clients.find(x=>x.id===session.clientId);
+      queueDietitianNotification('📋 Anket Tamamlandı', (me?me.name:'Bir danışan') + ' anket yanıtlarını gönderdi.');
+      view.fillSurveyId = null; save(); alert('Anket gönderildi'); render();
+    };
+    document.querySelectorAll('[data-pdf]').forEach(b => b.onclick = () => {
+      const c = db.clients.find(x=>x.id===session.clientId);
+      if (!c || c.payment !== 'alindi') { alert('⚠️ Lütfen ödemenizi yapınız.'); return; }
+      downloadPdf(b.dataset.pdf);
+    });
+    if ($('#closeDiet')) $('#closeDiet').onclick = () => { view.selectedClientId = null; render(); };
+
+    // Tetkik (client)
+    document.querySelectorAll('[data-vtet]').forEach(b => b.onclick = () => { view.viewMyTetkikId = b.dataset.vtet; render(); });
+    document.querySelectorAll('[data-tetpdfc]').forEach(b => b.onclick = () => downloadTetkikPdf(b.dataset.tetpdfc));
+    if ($('#closeTetView')) $('#closeTetView').onclick = () => { view.viewMyTetkikId = null; render(); };
+    document.querySelectorAll('[data-delmyres]').forEach(b => b.onclick = () => {
+      if (!confirm('Bu sonuç silinsin mi?')) return;
+      db.tetkikResults = db.tetkikResults.filter(r=>r.id!==b.dataset.delmyres); save(); render();
+    });
+    if ($('#uploadResult')) $('#uploadResult').onclick = () => {
+      const f = $('#resultFile').files[0];
+      if (!f) { $('#resErr').textContent='Bir dosya seçin'; return; }
+      if (f.size > 8 * 1024 * 1024) { $('#resErr').textContent='Dosya 8 MB\'dan büyük olamaz'; return; }
+      const reader = new FileReader();
+      reader.onload = () => {
+        db.tetkikResults.push({id:uid(), clientId:session.clientId, fileName:f.name, fileType:f.type||'application/octet-stream', dataUrl:reader.result, date:Date.now()});
+        const me = db.clients.find(x=>x.id===session.clientId);
+        queueDietitianNotification('🧪 Yeni Tetkik Sonucu', (me?me.name:'Bir danışan') + ' tahlil sonucu gönderdi: ' + f.name);
+        save(); alert('Sonuç gönderildi'); render();
+      };
+      reader.onerror = () => { $('#resErr').textContent='Dosya okunamadı'; };
+      reader.readAsDataURL(f);
+    };
+  }
+}
+
+function downloadPdf(dietId) {
+  const d = db.diets.find(x=>x.id===dietId);
+  const c = db.clients.find(x=>x.id===d.clientId);
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFont('helvetica','bold'); doc.setFontSize(16);
+  doc.text(d.title, 14, 20);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text('Danisan: '+c.name, 14, 30);
+  doc.text('Tarih: '+fmtDate(d.date), 14, 36);
+  doc.setFontSize(11);
+  const lines = doc.splitTextToSize(d.content.replace(/[çÇğĞıİöÖşŞüÜ]/g, m=>({ç:'c',Ç:'C',ğ:'g',Ğ:'G',ı:'i',İ:'I',ö:'o',Ö:'O',ş:'s',Ş:'S',ü:'u',Ü:'U'}[m])), 180);
+  doc.text(lines, 14, 48);
+  doc.save(d.title.replace(/\s+/g,'_')+'.pdf');
+}
+
+function downloadTetkikPdf(reqId) {
+  const r = db.tetkikRequests.find(x=>x.id===reqId);
+  if (!r) return;
+  const c = db.clients.find(x=>x.id===r.clientId);
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const trClean = s => (s||'').replace(/[çÇğĞıİöÖşŞüÜ]/g, m=>({ç:'c',Ç:'C',ğ:'g',Ğ:'G',ı:'i',İ:'I',ö:'o',Ö:'O',ş:'s',Ş:'S',ü:'u',Ü:'U'}[m]));
+  doc.setFont('helvetica','bold'); doc.setFontSize(15);
+  doc.text('Yetiskinler Icin Diyetisyen Kan Tahlilleri', 14, 18);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text('Danisan: ' + trClean(c?c.name:'-'), 14, 26);
+  doc.text('Tarih: ' + fmtDate(r.date), 14, 32);
+  let y = 42;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10);
+  doc.text('Kategori', 14, y); doc.text('Tahlil', 70, y); doc.text('Ne icin bakilir', 120, y);
+  doc.setLineWidth(0.3); doc.line(14, y+1.5, 196, y+1.5);
+  y += 7;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  r.tests.forEach(idx => {
+    const t = TETKIK_TESTS[idx]; if (!t) return;
+    if (y > 275) { doc.addPage(); y = 20; }
+    doc.text(trClean(t.cat), 14, y);
+    doc.text(trClean(t.name), 70, y);
+    doc.text(trClean(t.why), 120, y);
+    y += 6;
+  });
+  if (r.note) {
+    y += 6;
+    if (y > 260) { doc.addPage(); y = 20; }
+    doc.setFont('helvetica','bold'); doc.text('Aciklama:', 14, y); y += 6;
+    doc.setFont('helvetica','normal');
+    const lines = doc.splitTextToSize(trClean(r.note), 180);
+    doc.text(lines, 14, y);
+  }
+  doc.save('tetkik_' + trClean((c?c.name:'danisan')).replace(/\s+/g,'_') + '.pdf');
+}
+
+(function restoreSession() {
+  if (localStorage.getItem('diyet_keep_open') !== '1') return;
+  try {
+    const s = JSON.parse(localStorage.getItem('diyet_session') || 'null');
+    if (!s) return;
+    if (s.role === 'dietitian') { session = s; return; }
+    if (s.role === 'client') {
+      const c = db.clients.find(x => x.id === s.clientId);
+      const TEN_DAYS = 10 * 24 * 60 * 60 * 1000;
+      if (!s.loginAt || (Date.now() - s.loginAt) > TEN_DAYS) {
+        localStorage.removeItem('diyet_session');
+        return;
+      }
+      if (c && c.active) { session = s; }
+      else localStorage.removeItem('diyet_session');
+    }
+  } catch(e) { localStorage.removeItem('diyet_session'); }
+})();
+render();
+</script>
+</body>
+</html>
