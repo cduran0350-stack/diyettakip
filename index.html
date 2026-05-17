@@ -13,6 +13,8 @@
 <link rel="manifest" href="manifest.json">
 <title>Diyet Takip</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <style>
   * { box-sizing: border-box; font-family: Segoe UI, Arial, sans-serif; }
   body { margin: 0; background: #f0f4f8; color: #222; }
@@ -301,16 +303,86 @@ const DB = {
 };
 
 let db = DB.load();
-if (!db.templates) { db.templates = []; DB.save(db); }
-if (!db.dietitianNotifications) { db.dietitianNotifications = []; DB.save(db); }
-if (!db.surveys) { db.surveys = []; DB.save(db); }
-if (!db.tests) { db.tests = []; DB.save(db); }
-if (!db.tetkikRequests) { db.tetkikRequests = []; DB.save(db); }
-if (!db.tetkikResults) { db.tetkikResults = []; DB.save(db); }
-if (!db.notificationsLog) { db.notificationsLog = []; DB.save(db); }
-if (db.dietitian && db.dietitian.username === 'admin' && db.dietitian.password === 'admin') {
-  db.dietitian = { username: 'dytaysenur', password: 'ozenduran' };
-  DB.save(db);
+function ensureDefaults() {
+  if (!db) db = {};
+  if (!db.dietitian) db.dietitian = { username: 'dytaysenur', password: 'ozenduran' };
+  if (!db.clients) db.clients = [];
+  if (!db.diets) db.diets = [];
+  if (!db.weights) db.weights = [];
+  if (!db.templates) db.templates = [];
+  if (!db.dietitianNotifications) db.dietitianNotifications = [];
+  if (!db.surveys) db.surveys = [];
+  if (!db.tests) db.tests = [];
+  if (!db.tetkikRequests) db.tetkikRequests = [];
+  if (!db.tetkikResults) db.tetkikResults = [];
+  if (!db.notificationsLog) db.notificationsLog = [];
+  if (db.dietitian && db.dietitian.username === 'admin' && db.dietitian.password === 'admin') {
+    db.dietitian = { username: 'dytaysenur', password: 'ozenduran' };
+  }
+}
+ensureDefaults();
+DB.save(db);
+
+// ---------- Firebase / Firestore sync ----------
+const firebaseConfig = {
+  apiKey: "AIzaSyAqPQkXsgLZaloEnVlh-T1NLgkJpkAB4tI",
+  authDomain: "diyetisyen-5bbaf.firebaseapp.com",
+  projectId: "diyetisyen-5bbaf",
+  storageBucket: "diyetisyen-5bbaf.firebasestorage.app",
+  messagingSenderId: "1080384039240",
+  appId: "1:1080384039240:web:c7cc7e66d29020756dab7d",
+  measurementId: "G-P993GFHSSH"
+};
+let fsdb = null, FS_DOC = null, fsSaveTimer = null, fsPendingWrite = false, fsLastWriteAt = 0, fsReady = false;
+try {
+  firebase.initializeApp(firebaseConfig);
+  fsdb = firebase.firestore();
+  FS_DOC = fsdb.collection('app').doc('state');
+} catch(e) { console.error('Firebase init failed', e); }
+
+function pushToFirestore() {
+  if (!FS_DOC || !db) return;
+  if (fsSaveTimer) clearTimeout(fsSaveTimer);
+  fsSaveTimer = setTimeout(() => {
+    fsPendingWrite = true;
+    fsLastWriteAt = Date.now();
+    const payload = JSON.parse(JSON.stringify(db));
+    FS_DOC.set(payload).catch(e => console.error('Firestore set', e)).finally(() => {
+      setTimeout(() => { fsPendingWrite = false; }, 600);
+    });
+  }, 500);
+}
+
+// Wrap DB.save to also push to Firestore
+const _origDbSave = DB.save.bind(DB);
+DB.save = function(d) { _origDbSave(d); pushToFirestore(); };
+
+// Initial load + realtime listener
+if (FS_DOC) {
+  FS_DOC.get().then(snap => {
+    if (snap.exists) {
+      db = snap.data();
+      ensureDefaults();
+      _origDbSave(db);
+      fsReady = true;
+      if (typeof render === 'function') try { render(); } catch(e) {}
+    } else {
+      FS_DOC.set(JSON.parse(JSON.stringify(db))).catch(()=>{});
+      fsReady = true;
+    }
+  }).catch(e => { console.error('Firestore get', e); fsReady = true; });
+
+  FS_DOC.onSnapshot(snap => {
+    if (!snap.exists) return;
+    // Skip echo of our own writes
+    if (fsPendingWrite || (Date.now() - fsLastWriteAt < 1500)) return;
+    const newDb = snap.data();
+    if (!newDb) return;
+    db = newDb;
+    ensureDefaults();
+    _origDbSave(db);
+    if (typeof render === 'function') try { render(); } catch(e) {}
+  }, e => console.error('Firestore snapshot', e));
 }
 
 const TETKIK_TESTS = [
