@@ -389,6 +389,24 @@ function pushToFirestore() {
 const _origDbSave = DB.save.bind(DB);
 DB.save = function(d) { _origDbSave(d); pushToFirestore(); };
 
+// Render erteleme: modal acik veya kullanici input'ta yaziyorsa otomatik render yapma
+let pendingRenderCheck = null;
+function isInteractionActive() {
+  if (document.querySelector('.modal-bg')) return true;
+  const a = document.activeElement;
+  if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT' || a.isContentEditable)) return true;
+  return false;
+}
+function schedulePendingRender() {
+  if (pendingRenderCheck) return;
+  pendingRenderCheck = setInterval(() => {
+    if (!isInteractionActive()) {
+      clearInterval(pendingRenderCheck); pendingRenderCheck = null;
+      if (typeof render === 'function') try { render(); } catch(e) {}
+    }
+  }, 1500);
+}
+
 // Initial load + realtime listener
 if (FS_DOC) {
   FS_DOC.get().then(snap => {
@@ -420,6 +438,8 @@ if (FS_DOC) {
     db = newDb;
     ensureDefaults();
     _origDbSave(db);
+    // Modal acik veya kullanici input/textarea'da yaziyorsa render'i ertele
+    if (isInteractionActive()) { schedulePendingRender(); return; }
     if (typeof render === 'function') try { render(); } catch(e) {}
   }, e => console.error('Firestore snapshot', e));
 }
@@ -726,6 +746,7 @@ function startDietitianRefresh() {
     if (!session || session.role !== 'dietitian') { clearInterval(dietitianRefreshTimer); dietitianRefreshTimer = null; return; }
     db = DB.load();
     fireDietitianNotifications();
+    if (isInteractionActive()) return;
     if (view.tab === 'clients' || view.tab === 'weights') render();
   }, 15000);
 }
