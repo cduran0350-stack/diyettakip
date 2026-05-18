@@ -608,7 +608,7 @@ function render() {
 
 // ---------- Login ----------
 function loginView() {
-  const remembered = localStorage.getItem('diyet_keep_open') === '1';
+  const remembered = localStorage.getItem('diyet_keep_open') !== '0';
   return `
     <div class="login">
       <h2 style="display:flex;justify-content:center;margin-bottom:18px">${brandLogo('Diyetisyen & Danışan')}</h2>
