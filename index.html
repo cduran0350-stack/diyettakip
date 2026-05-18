@@ -2193,16 +2193,58 @@ function bindEvents() {
     if ($('#uploadResult')) $('#uploadResult').onclick = () => {
       const f = $('#resultFile').files[0];
       if (!f) { $('#resErr').textContent='Bir dosya seçin'; return; }
-      if (f.size > 600 * 1024) { $('#resErr').textContent='Dosya 600 KB\'dan büyük olamaz (Firebase limiti). Fotoğrafı küçültüp tekrar deneyin.'; return; }
-      const reader = new FileReader();
-      reader.onload = () => {
-        db.tetkikResults.push({id:uid(), clientId:session.clientId, fileName:f.name, fileType:f.type||'application/octet-stream', dataUrl:reader.result, date:Date.now()});
+      const TARGET = 500 * 1024; // 500 KB
+      const isImage = f.type && f.type.startsWith('image/');
+      const finish = (fileName, fileType, dataUrl) => {
+        db.tetkikResults.push({id:uid(), clientId:session.clientId, fileName, fileType, dataUrl, date:Date.now()});
         const me = db.clients.find(x=>x.id===session.clientId);
-        queueDietitianNotification('🧪 Yeni Tetkik Sonucu', (me?me.name:'Bir danışan') + ' tahlil sonucu gönderdi: ' + f.name);
+        queueDietitianNotification('🧪 Yeni Tetkik Sonucu', (me?me.name:'Bir danışan') + ' tahlil sonucu gönderdi: ' + fileName);
         save(); alert('Sonuç gönderildi'); render();
       };
-      reader.onerror = () => { $('#resErr').textContent='Dosya okunamadı'; };
-      reader.readAsDataURL(f);
+      if (isImage) {
+        $('#resErr').textContent = 'Fotoğraf sıkıştırılıyor...';
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            // Hedef boyut altina inene kadar boyutu/kaliteyi dusur
+            let maxDim = 1600;
+            let quality = 0.85;
+            const tryCompress = () => {
+              const ratio = Math.min(1, maxDim / Math.max(img.width, img.height));
+              const w = Math.round(img.width * ratio);
+              const h = Math.round(img.height * ratio);
+              const canvas = document.createElement('canvas');
+              canvas.width = w; canvas.height = h;
+              canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+              const dataUrl = canvas.toDataURL('image/jpeg', quality);
+              // base64 boyutu yaklasik: (length * 3/4) byte
+              const approxBytes = Math.ceil((dataUrl.length - 22) * 3 / 4);
+              if (approxBytes <= TARGET || (quality <= 0.4 && maxDim <= 600)) {
+                $('#resErr').textContent = '';
+                const baseName = f.name.replace(/\.[^.]+$/, '') || 'foto';
+                finish(baseName + '.jpg', 'image/jpeg', dataUrl);
+              } else {
+                if (quality > 0.5) quality -= 0.1;
+                else { maxDim = Math.max(600, Math.round(maxDim * 0.8)); quality = 0.8; }
+                setTimeout(tryCompress, 0);
+              }
+            };
+            tryCompress();
+          };
+          img.onerror = () => { $('#resErr').textContent='Fotoğraf okunamadı'; };
+          img.src = reader.result;
+        };
+        reader.onerror = () => { $('#resErr').textContent='Dosya okunamadı'; };
+        reader.readAsDataURL(f);
+      } else {
+        // PDF veya diger - sikistirilamaz, boyut kontrolu
+        if (f.size > 700 * 1024) { $('#resErr').textContent='PDF 700 KB\'dan büyük olamaz. Daha küçük bir dosya seçin.'; return; }
+        const reader = new FileReader();
+        reader.onload = () => finish(f.name, f.type||'application/octet-stream', reader.result);
+        reader.onerror = () => { $('#resErr').textContent='Dosya okunamadı'; };
+        reader.readAsDataURL(f);
+      }
     };
   }
 }
