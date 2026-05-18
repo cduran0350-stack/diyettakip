@@ -367,6 +367,43 @@ function clearFsError() {
   if (bar) bar.remove();
 }
 
+// Firestore: undefined, NaN, nested-array-in-array yasak. Recursive temizleyici.
+function sanitizeForFs(v) {
+  if (v === undefined || v === null) return null;
+  if (typeof v === 'number') { if (!isFinite(v)) return null; return v; }
+  if (typeof v === 'string' || typeof v === 'boolean') return v;
+  if (typeof v === 'function' || typeof v === 'symbol') return null;
+  if (Array.isArray(v)) {
+    return v.map(item => {
+      if (Array.isArray(item)) {
+        // Firestore izinli degil: array icinde array. Object ile sar.
+        return { _arr: item.map(sanitizeForFs) };
+      }
+      const s = sanitizeForFs(item);
+      return s === undefined ? null : s;
+    }).filter(x => x !== undefined);
+  }
+  if (typeof v === 'object') {
+    const out = {};
+    for (const k in v) {
+      if (!Object.prototype.hasOwnProperty.call(v, k)) continue;
+      const sv = sanitizeForFs(v[k]);
+      if (sv !== undefined) out[k] = sv;
+    }
+    return out;
+  }
+  return null;
+}
+// Geri yukleme sirasinda _arr sarmasini geri ac
+function unwrapFromFs(v) {
+  if (v === null || typeof v !== 'object') return v;
+  if (Array.isArray(v)) return v.map(unwrapFromFs);
+  if (v._arr && Array.isArray(v._arr) && Object.keys(v).length === 1) return v._arr.map(unwrapFromFs);
+  const out = {};
+  for (const k in v) out[k] = unwrapFromFs(v[k]);
+  return out;
+}
+
 function pushToFirestore() {
   if (!FS_DOC || !db) return;
   if (fsSaveTimer) clearTimeout(fsSaveTimer);
@@ -374,8 +411,15 @@ function pushToFirestore() {
     fsPendingWrite = true;
     fsLastWriteAt = Date.now();
     let payload;
-    try { payload = JSON.parse(JSON.stringify(db)); }
+    try { payload = sanitizeForFs(db); }
     catch(e) { showFsError('Veri serileştirilemedi: ' + e.message); fsPendingWrite = false; return; }
+    // 950 KB üzerinde uyari (Firestore tek doc limiti 1 MB)
+    try {
+      const sz = JSON.stringify(payload).length;
+      if (sz > 950000) {
+        showFsError('Veri boyutu çok büyük (' + Math.round(sz/1024) + ' KB). Büyük tetkik dosyalarını silin.');
+      }
+    } catch(e) {}
     FS_DOC.set(payload).then(() => clearFsError()).catch(e => {
       console.error('Firestore set', e);
       showFsError((e && e.code ? e.code + ' — ' : '') + (e && e.message ? e.message : 'bilinmeyen hata'));
@@ -411,7 +455,7 @@ function schedulePendingRender() {
 if (FS_DOC) {
   FS_DOC.get().then(snap => {
     if (snap.exists) {
-      db = snap.data();
+      db = unwrapFromFs(snap.data());
       ensureDefaults();
       _origDbSave(db);
       fsReady = true;
@@ -433,7 +477,7 @@ if (FS_DOC) {
     if (!snap.exists) return;
     // Skip echo of our own writes
     if (fsPendingWrite || (Date.now() - fsLastWriteAt < 1500)) return;
-    const newDb = snap.data();
+    const newDb = unwrapFromFs(snap.data());
     if (!newDb) return;
     db = newDb;
     ensureDefaults();
@@ -2149,7 +2193,7 @@ function bindEvents() {
     if ($('#uploadResult')) $('#uploadResult').onclick = () => {
       const f = $('#resultFile').files[0];
       if (!f) { $('#resErr').textContent='Bir dosya seçin'; return; }
-      if (f.size > 8 * 1024 * 1024) { $('#resErr').textContent='Dosya 8 MB\'dan büyük olamaz'; return; }
+      if (f.size > 600 * 1024) { $('#resErr').textContent='Dosya 600 KB\'dan büyük olamaz (Firebase limiti). Fotoğrafı küçültüp tekrar deneyin.'; return; }
       const reader = new FileReader();
       reader.onload = () => {
         db.tetkikResults.push({id:uid(), clientId:session.clientId, fileName:f.name, fileType:f.type||'application/octet-stream', dataUrl:reader.result, date:Date.now()});
