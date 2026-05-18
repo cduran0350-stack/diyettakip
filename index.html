@@ -328,6 +328,8 @@ function ensureDefaults() {
   if (!db.tetkikRequests) db.tetkikRequests = [];
   if (!db.tetkikResults) db.tetkikResults = [];
   if (!db.notificationsLog) db.notificationsLog = [];
+  if (!db.dailyLogs) db.dailyLogs = [];
+  if (!db.scheduleNotifications) db.scheduleNotifications = {};
   if (db.dietitian && db.dietitian.username === 'admin' && db.dietitian.password === 'admin') {
     db.dietitian = { username: 'dytaysenur', password: 'ozenduran' };
   }
@@ -545,6 +547,106 @@ function headerScheduleHtml(c) {
     <div>⚖️ Sonraki Kilo Takibi: <b>${nextStr}</b></div>
   </div>`;
 }
+function dateKey(ts) {
+  const d = new Date(ts);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function todayKey() { return dateKey(Date.now()); }
+function todayMidnight() { const d = new Date(); d.setHours(0,0,0,0); return d.getTime(); }
+
+// Verilen danisan icin bugun ve tum gecmis/gelecek kontrol noktalarini dondurur (1 onceki + tum gelecek).
+function getClientCheckDates(c) {
+  const diets = db.diets.filter(d=>d.clientId===c.id).sort((a,b)=>a.date-b.date);
+  if (!diets.length) return null;
+  const start = diets[0].date;
+  const periodDays = parseInt(c.period||'0',10);
+  if (!periodDays) return null;
+  const todayTs = todayMidnight();
+  const startDay = new Date(start); startDay.setHours(0,0,0,0);
+  const startTs = startDay.getTime();
+  const dayMs = 86400000;
+  const elapsed = Math.floor((todayTs - startTs) / dayMs);
+  const lastBoundary = startTs + Math.floor(elapsed / periodDays) * periodDays * dayMs;
+  const nextBoundary = lastBoundary + periodDays * dayMs;
+  return { start, periodDays, lastBoundary, nextBoundary };
+}
+
+function hasWeightOn(clientId, dayKey) {
+  return (db.weights||[]).some(w => w.clientId===clientId && dateKey(w.date) === dayKey);
+}
+
+// Periyot bazli otomatik bildirim kontrolu
+function checkScheduleNotifications() {
+  if (!db || !db.clients) return;
+  const tk = todayKey();
+  const tomorrowKey = dateKey(Date.now() + 86400000);
+  const yesterdayKey = dateKey(Date.now() - 86400000);
+  if (!db.scheduleNotifications) db.scheduleNotifications = {};
+  let changed = false;
+  db.clients.filter(c => c.active).forEach(c => {
+    const s = getClientCheckDates(c);
+    if (!s) return;
+    const lastKey = dateKey(s.lastBoundary);
+    const nextKey = dateKey(s.nextBoundary);
+    // 1. BUGUN kontrol gunu (next boundary == today)
+    if (nextKey === tk) {
+      const key = c.id + '_' + tk + '_today';
+      if (!db.scheduleNotifications[key]) {
+        db.scheduleNotifications[key] = Date.now();
+        queueNotification(c.id, '📅 Bugün Kontrol Günü', 'Kilonuzu girmeyi ve günlük takibinizi yapmayı unutmayın.');
+        queueDietitianNotification('📅 Kontrol Günü', c.name + ' bugün kontrol günü.');
+        changed = true;
+      }
+    }
+    // 2. YARIN kontrol (next == tomorrow)
+    if (nextKey === tomorrowKey) {
+      const key = c.id + '_' + tk + '_tomorrow';
+      if (!db.scheduleNotifications[key]) {
+        db.scheduleNotifications[key] = Date.now();
+        queueNotification(c.id, '🔔 Yarın Kontrol Günü', 'Yarın kontrol gününüz — kilonuzu girmeyi unutmayın.');
+        changed = true;
+      }
+    }
+    // 3. GECIKEN: dun veya daha onceki bir periyot bitisi varsa ve o gun kilo girilmemisse
+    if (lastKey === yesterdayKey && !hasWeightOn(c.id, lastKey)) {
+      const key = c.id + '_' + tk + '_overdue';
+      if (!db.scheduleNotifications[key]) {
+        db.scheduleNotifications[key] = Date.now();
+        queueNotification(c.id, '⚠️ Kontrol Gününüz Geçti', 'Dün kontrol gününüzdü — lütfen kilonuzu girer misiniz?');
+        queueDietitianNotification('⚠️ Geciken Kontrol', c.name + ' dünkü kontrolünü geçti.');
+        changed = true;
+      }
+    }
+  });
+  // Eski schedule bildirimlerini temizle (30+ gun once)
+  const cutoff = Date.now() - 30 * 86400000;
+  for (const k in db.scheduleNotifications) {
+    if (db.scheduleNotifications[k] < cutoff) delete db.scheduleNotifications[k];
+  }
+  if (changed) save();
+}
+
+// ---------- Günlük takip (su + öğün) ----------
+function getTodayLog(clientId) {
+  if (!db.dailyLogs) db.dailyLogs = [];
+  const tk = todayKey();
+  let log = db.dailyLogs.find(l => l.clientId === clientId && l.date === tk);
+  if (!log) {
+    log = { id: uid(), clientId, date: tk, water: 0, meals: { breakfast:false, lunch:false, dinner:false, snacks:false } };
+    db.dailyLogs.push(log);
+  }
+  if (!log.meals) log.meals = { breakfast:false, lunch:false, dinner:false, snacks:false };
+  return log;
+}
+
+function getLogsForClient(clientId, days) {
+  if (!db.dailyLogs) return [];
+  return db.dailyLogs
+    .filter(l => l.clientId === clientId)
+    .sort((a,b) => (a.date > b.date ? -1 : 1))
+    .slice(0, days || 30);
+}
+
 function dietitianScheduleSummary() {
   const today = new Date(); today.setHours(0,0,0,0);
   const todayTs = today.getTime();
@@ -793,6 +895,16 @@ function startDietitianRefresh() {
     if (isInteractionActive()) return;
     if (view.tab === 'clients' || view.tab === 'weights') render();
   }, 15000);
+}
+
+// Saatlik schedule notification kontrolu
+let scheduleCheckTimer = null;
+function startScheduleCheck() {
+  if (scheduleCheckTimer) clearInterval(scheduleCheckTimer);
+  try { checkScheduleNotifications(); } catch(e) {}
+  scheduleCheckTimer = setInterval(() => {
+    try { checkScheduleNotifications(); } catch(e) {}
+  }, 60 * 60 * 1000); // her saat
 }
 
 // ---------- Dietitian View ----------
@@ -1197,6 +1309,52 @@ function clientDetailView() {
       ${wSummary}
       <table><thead><tr><th>Tarih</th><th>Kilo</th><th>İşlem</th></tr></thead><tbody>${wRows}</tbody></table>
     </div>
+
+    ${(() => {
+      const logs = getLogsForClient(c.id, 30);
+      if (!logs.length) return `
+        <div class="card">
+          <h3>📊 Günlük Takip (Su + Öğün)</h3>
+          <p style="color:#718096;text-align:center;padding:14px">Henüz günlük takip kaydı yok.</p>
+        </div>`;
+      const last7 = logs.slice(0,7);
+      const totalWater = last7.reduce((s,l) => s + (l.water||0), 0);
+      const avgWater = (totalWater / last7.length).toFixed(1);
+      let mealsDone = 0, mealsTotal = last7.length * 4;
+      last7.forEach(l => {
+        if (l.meals) ['breakfast','lunch','dinner','snacks'].forEach(k => { if (l.meals[k]) mealsDone++; });
+      });
+      const mealPct = mealsTotal ? Math.round((mealsDone / mealsTotal) * 100) : 0;
+      const tCheck = m => m ? '<span style="color:#22543d;font-weight:700">✓</span>' : '<span style="color:#cbd5e0">·</span>';
+      const dlRows = logs.map(l => {
+        const m = l.meals || {};
+        const score = (l.water>=8?1:0) + (m.breakfast?1:0) + (m.lunch?1:0) + (m.dinner?1:0) + (m.snacks?1:0);
+        const scoreColor = score >= 4 ? '#22543d' : score >= 2 ? '#d69e2e' : '#c53030';
+        const [y,mo,d] = l.date.split('-');
+        return `<tr>
+          <td>${d}.${mo}.${y}</td>
+          <td>${l.water||0} / 8</td>
+          <td style="text-align:center">${tCheck(m.breakfast)}</td>
+          <td style="text-align:center">${tCheck(m.lunch)}</td>
+          <td style="text-align:center">${tCheck(m.dinner)}</td>
+          <td style="text-align:center">${tCheck(m.snacks)}</td>
+          <td style="text-align:center;color:${scoreColor};font-weight:700">${score}/5</td>
+        </tr>`;
+      }).join('');
+      return `
+      <div class="card">
+        <h3>📊 Günlük Takip — Son 30 Gün (${logs.length} gün)</h3>
+        <div style="background:#f7fafc;padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:13px;color:#4a5568">
+          Son 7 gün ortalama: <b>${avgWater}/8 bardak su</b> · Öğün uyumu: <b>%${mealPct}</b> (${mealsDone}/${mealsTotal})
+        </div>
+        <div style="overflow-x:auto">
+          <table style="font-size:13px">
+            <thead><tr><th>Tarih</th><th>Su</th><th>Kahv</th><th>Öğl</th><th>Akş</th><th>Ara</th><th>Skor</th></tr></thead>
+            <tbody>${dlRows}</tbody>
+          </table>
+        </div>
+      </div>`;
+    })()}
 
     <div class="card">
       <h3>🧪 Gönderilen Tetkik İstekleri (${tetReqs.length})</h3>
@@ -1680,6 +1838,66 @@ function clientView() {
         <h3 style="margin-top:20px">Kilo Geçmişim</h3>
         <table><thead><tr><th>Tarih</th><th>Kilo</th><th>İşlem</th></tr></thead><tbody>${wRows}</tbody></table>
       </div>
+
+      ${(() => {
+        const log = getTodayLog(c.id);
+        const last7 = getLogsForClient(c.id, 7).slice().reverse();
+        const todayStr = new Date().toLocaleDateString('tr-TR', { weekday:'long', day:'2-digit', month:'long' });
+        const waterPct = Math.min(100, (log.water / 8) * 100);
+        const mealLabel = { breakfast:'Kahvaltı', lunch:'Öğle', dinner:'Akşam', snacks:'Ara öğün' };
+        const mealsHtml = ['breakfast','lunch','dinner','snacks'].map(k => `
+          <label style="display:flex;align-items:center;gap:10px;padding:10px;background:${log.meals[k]?'#c6f6d5':'#f7fafc'};border-radius:8px;cursor:pointer;font-weight:600;color:${log.meals[k]?'#22543d':'#4a5568'};border:2px solid ${log.meals[k]?'#9ae6b4':'#e2e8f0'};transition:all .15s">
+            <input type="checkbox" class="mealCheck" data-meal="${k}" ${log.meals[k]?'checked':''} style="width:auto;margin:0;transform:scale(1.3)"/>
+            <span>${log.meals[k]?'✅':'⬜'} ${mealLabel[k]}</span>
+          </label>`).join('');
+        const stripDays = (() => {
+          // son 7 gun + bugun (eksik gunler bos)
+          const out = [];
+          for (let i = 6; i >= 0; i--) {
+            const d = new Date(); d.setDate(d.getDate() - i); d.setHours(0,0,0,0);
+            const dk = dateKey(d.getTime());
+            const l = (db.dailyLogs||[]).find(x => x.clientId === c.id && x.date === dk);
+            let score = 0, total = 5; // 1 puan: su >= 8, 4 puan: ogunler
+            if (l) {
+              if (l.water >= 8) score++;
+              ['breakfast','lunch','dinner','snacks'].forEach(k => { if (l.meals && l.meals[k]) score++; });
+            }
+            const dayLabel = d.toLocaleDateString('tr-TR', { weekday:'short' }).replace('.','');
+            const color = !l ? '#e2e8f0' : (score >= 4 ? '#22543d' : score >= 2 ? '#d69e2e' : '#c53030');
+            const bg = !l ? '#f7fafc' : (score >= 4 ? '#c6f6d5' : score >= 2 ? '#fef5e7' : '#fed7d7');
+            out.push(`<div style="text-align:center;flex:1;min-width:40px">
+              <div style="font-size:11px;color:#718096;margin-bottom:4px">${dayLabel}</div>
+              <div style="width:36px;height:36px;border-radius:50%;background:${bg};color:${color};display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;border:2px solid ${color}">${l ? score : '–'}</div>
+              <div style="font-size:10px;color:#a0aec0;margin-top:2px">${d.getDate()}/${d.getMonth()+1}</div>
+            </div>`);
+          }
+          return out.join('');
+        })();
+        return `
+        <div class="card" style="border-top:4px solid #2c7a7b">
+          <h3>📊 Bugünkü Takibim <span style="font-weight:400;font-size:13px;color:#718096">— ${todayStr}</span></h3>
+          <div style="background:#f7fafc;padding:14px;border-radius:10px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div style="font-weight:700;color:#2c7a7b">💧 Su</div>
+              <div style="font-size:13px;color:#718096">${log.water} / 8 bardak</div>
+            </div>
+            <div style="background:#e2e8f0;height:12px;border-radius:6px;overflow:hidden;margin-bottom:10px">
+              <div style="background:linear-gradient(90deg,#4299e1,#2c7a7b);height:100%;width:${waterPct}%;transition:width .25s"></div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;justify-content:center">
+              <button id="waterMinus" style="width:48px;height:48px;border-radius:50%;font-size:24px;padding:0;background:#4a5568">−</button>
+              <div style="font-size:32px;font-weight:700;color:#2c7a7b;min-width:80px;text-align:center">${log.water}</div>
+              <button id="waterPlus" style="width:48px;height:48px;border-radius:50%;font-size:24px;padding:0">+</button>
+            </div>
+          </div>
+          <div style="font-weight:700;color:#2c7a7b;margin-bottom:8px">🍽️ Öğünlerim</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${mealsHtml}</div>
+
+          <h3 style="margin-top:18px;font-size:15px">📅 Son 7 Gün</h3>
+          <div style="display:flex;gap:6px;justify-content:space-between;flex-wrap:wrap">${stripDays}</div>
+          <p style="font-size:11px;color:#a0aec0;margin:8px 0 0;text-align:center">Yeşil: 4+ puan · Sarı: 2-3 · Kırmızı: 0-1 (5 üzerinden)</p>
+        </div>`;
+      })()}
       <div class="card">
         <h3>📋 Anketlerim</h3>
         <table>
@@ -1737,6 +1955,7 @@ function bindEvents() {
   };
   if (session.role === 'client' && !heartbeatTimer) startHeartbeat();
   if (session.role === 'dietitian' && !dietitianRefreshTimer) startDietitianRefresh();
+  if (!scheduleCheckTimer) startScheduleCheck();
 
   // Notification bell + modal
   if ($('#bellBtn')) $('#bellBtn').onclick = () => {
@@ -2125,6 +2344,23 @@ function bindEvents() {
       queueDietitianNotification('⚖️ Yeni Kilo Kaydı', (me?me.name:'Bir danışan') + ' kilo girişi yaptı: ' + v + ' kg');
       save(); render();
     };
+
+    // Günlük takip — su + öğün
+    if ($('#waterPlus')) $('#waterPlus').onclick = () => {
+      const log = getTodayLog(session.clientId);
+      if (log.water < 20) log.water++;
+      save(); render();
+    };
+    if ($('#waterMinus')) $('#waterMinus').onclick = () => {
+      const log = getTodayLog(session.clientId);
+      if (log.water > 0) log.water--;
+      save(); render();
+    };
+    document.querySelectorAll('.mealCheck').forEach(cb => cb.onchange = () => {
+      const log = getTodayLog(session.clientId);
+      log.meals[cb.dataset.meal] = cb.checked;
+      save(); render();
+    });
     document.querySelectorAll('[data-editw]').forEach(b => b.onclick = () => { view.editWeightId = b.dataset.editw; render(); });
     document.querySelectorAll('[data-cancelw]').forEach(b => b.onclick = () => { view.editWeightId = null; render(); });
     document.querySelectorAll('[data-savew]').forEach(b => b.onclick = () => {
