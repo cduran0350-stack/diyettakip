@@ -1310,51 +1310,7 @@ function clientDetailView() {
       <table><thead><tr><th>Tarih</th><th>Kilo</th><th>İşlem</th></tr></thead><tbody>${wRows}</tbody></table>
     </div>
 
-    ${(() => {
-      const logs = getLogsForClient(c.id, 30);
-      if (!logs.length) return `
-        <div class="card">
-          <h3>📊 Günlük Takip (Su + Öğün)</h3>
-          <p style="color:#718096;text-align:center;padding:14px">Henüz günlük takip kaydı yok.</p>
-        </div>`;
-      const last7 = logs.slice(0,7);
-      const totalWater = last7.reduce((s,l) => s + (l.water||0), 0);
-      const avgWater = (totalWater / last7.length).toFixed(1);
-      let mealsDone = 0, mealsTotal = last7.length * 4;
-      last7.forEach(l => {
-        if (l.meals) ['breakfast','lunch','dinner','snacks'].forEach(k => { if (l.meals[k]) mealsDone++; });
-      });
-      const mealPct = mealsTotal ? Math.round((mealsDone / mealsTotal) * 100) : 0;
-      const tCheck = m => m ? '<span style="color:#22543d;font-weight:700">✓</span>' : '<span style="color:#cbd5e0">·</span>';
-      const dlRows = logs.map(l => {
-        const m = l.meals || {};
-        const score = (l.water>=8?1:0) + (m.breakfast?1:0) + (m.lunch?1:0) + (m.dinner?1:0) + (m.snacks?1:0);
-        const scoreColor = score >= 4 ? '#22543d' : score >= 2 ? '#d69e2e' : '#c53030';
-        const [y,mo,d] = l.date.split('-');
-        return `<tr>
-          <td>${d}.${mo}.${y}</td>
-          <td>${l.water||0} / 8</td>
-          <td style="text-align:center">${tCheck(m.breakfast)}</td>
-          <td style="text-align:center">${tCheck(m.lunch)}</td>
-          <td style="text-align:center">${tCheck(m.dinner)}</td>
-          <td style="text-align:center">${tCheck(m.snacks)}</td>
-          <td style="text-align:center;color:${scoreColor};font-weight:700">${score}/5</td>
-        </tr>`;
-      }).join('');
-      return `
-      <div class="card">
-        <h3>📊 Günlük Takip — Son 30 Gün (${logs.length} gün)</h3>
-        <div style="background:#f7fafc;padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:13px;color:#4a5568">
-          Son 7 gün ortalama: <b>${avgWater}/8 bardak su</b> · Öğün uyumu: <b>%${mealPct}</b> (${mealsDone}/${mealsTotal})
-        </div>
-        <div style="overflow-x:auto">
-          <table style="font-size:13px">
-            <thead><tr><th>Tarih</th><th>Su</th><th>Kahv</th><th>Öğl</th><th>Akş</th><th>Ara</th><th>Skor</th></tr></thead>
-            <tbody>${dlRows}</tbody>
-          </table>
-        </div>
-      </div>`;
-    })()}
+
 
     <div class="card">
       <h3>🧪 Gönderilen Tetkik İstekleri (${tetReqs.length})</h3>
