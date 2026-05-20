@@ -1839,65 +1839,7 @@ function clientView() {
         <table><thead><tr><th>Tarih</th><th>Kilo</th><th>İşlem</th></tr></thead><tbody>${wRows}</tbody></table>
       </div>
 
-      ${(() => {
-        const log = getTodayLog(c.id);
-        const last7 = getLogsForClient(c.id, 7).slice().reverse();
-        const todayStr = new Date().toLocaleDateString('tr-TR', { weekday:'long', day:'2-digit', month:'long' });
-        const waterPct = Math.min(100, (log.water / 8) * 100);
-        const mealLabel = { breakfast:'Kahvaltı', lunch:'Öğle', dinner:'Akşam', snacks:'Ara öğün' };
-        const mealsHtml = ['breakfast','lunch','dinner','snacks'].map(k => `
-          <label style="display:flex;align-items:center;gap:10px;padding:10px;background:${log.meals[k]?'#c6f6d5':'#f7fafc'};border-radius:8px;cursor:pointer;font-weight:600;color:${log.meals[k]?'#22543d':'#4a5568'};border:2px solid ${log.meals[k]?'#9ae6b4':'#e2e8f0'};transition:all .15s">
-            <input type="checkbox" class="mealCheck" data-meal="${k}" ${log.meals[k]?'checked':''} style="width:auto;margin:0;transform:scale(1.3)"/>
-            <span>${log.meals[k]?'✅':'⬜'} ${mealLabel[k]}</span>
-          </label>`).join('');
-        const stripDays = (() => {
-          // son 7 gun + bugun (eksik gunler bos)
-          const out = [];
-          for (let i = 6; i >= 0; i--) {
-            const d = new Date(); d.setDate(d.getDate() - i); d.setHours(0,0,0,0);
-            const dk = dateKey(d.getTime());
-            const l = (db.dailyLogs||[]).find(x => x.clientId === c.id && x.date === dk);
-            let score = 0, total = 5; // 1 puan: su >= 8, 4 puan: ogunler
-            if (l) {
-              if (l.water >= 8) score++;
-              ['breakfast','lunch','dinner','snacks'].forEach(k => { if (l.meals && l.meals[k]) score++; });
-            }
-            const dayLabel = d.toLocaleDateString('tr-TR', { weekday:'short' }).replace('.','');
-            const color = !l ? '#e2e8f0' : (score >= 4 ? '#22543d' : score >= 2 ? '#d69e2e' : '#c53030');
-            const bg = !l ? '#f7fafc' : (score >= 4 ? '#c6f6d5' : score >= 2 ? '#fef5e7' : '#fed7d7');
-            out.push(`<div style="text-align:center;flex:1;min-width:40px">
-              <div style="font-size:11px;color:#718096;margin-bottom:4px">${dayLabel}</div>
-              <div style="width:36px;height:36px;border-radius:50%;background:${bg};color:${color};display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;border:2px solid ${color}">${l ? score : '–'}</div>
-              <div style="font-size:10px;color:#a0aec0;margin-top:2px">${d.getDate()}/${d.getMonth()+1}</div>
-            </div>`);
-          }
-          return out.join('');
-        })();
-        return `
-        <div class="card" style="border-top:4px solid #2c7a7b">
-          <h3>📊 Bugünkü Takibim <span style="font-weight:400;font-size:13px;color:#718096">— ${todayStr}</span></h3>
-          <div style="background:#f7fafc;padding:14px;border-radius:10px;margin-bottom:12px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-              <div style="font-weight:700;color:#2c7a7b">💧 Su</div>
-              <div style="font-size:13px;color:#718096">${log.water} / 8 bardak</div>
-            </div>
-            <div style="background:#e2e8f0;height:12px;border-radius:6px;overflow:hidden;margin-bottom:10px">
-              <div style="background:linear-gradient(90deg,#4299e1,#2c7a7b);height:100%;width:${waterPct}%;transition:width .25s"></div>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center;justify-content:center">
-              <button id="waterMinus" style="width:48px;height:48px;border-radius:50%;font-size:24px;padding:0;background:#4a5568">−</button>
-              <div style="font-size:32px;font-weight:700;color:#2c7a7b;min-width:80px;text-align:center">${log.water}</div>
-              <button id="waterPlus" style="width:48px;height:48px;border-radius:50%;font-size:24px;padding:0">+</button>
-            </div>
-          </div>
-          <div style="font-weight:700;color:#2c7a7b;margin-bottom:8px">🍽️ Öğünlerim</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${mealsHtml}</div>
 
-          <h3 style="margin-top:18px;font-size:15px">📅 Son 7 Gün</h3>
-          <div style="display:flex;gap:6px;justify-content:space-between;flex-wrap:wrap">${stripDays}</div>
-          <p style="font-size:11px;color:#a0aec0;margin:8px 0 0;text-align:center">Yeşil: 4+ puan · Sarı: 2-3 · Kırmızı: 0-1 (5 üzerinden)</p>
-        </div>`;
-      })()}
       <div class="card">
         <h3>📋 Anketlerim</h3>
         <table>
